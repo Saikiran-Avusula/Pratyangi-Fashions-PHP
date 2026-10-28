@@ -1,0 +1,7 @@
+Project: PHP storefront (PHP 8.3, PDO/MySQL) mirroring the Node API in E:\Testing fashion store\Pratyangiwebsite-main (read-only). Source of truth: docs/API_CONTRACT.md. History: .claude/snapshots/*/CHANGES.md.
+
+Rules: edit only inside storefront-php. Never open or print .env, config.local.php, keys, mail.log, sms.log or storage. Never touch MySQL port 3306; databases only on 127.0.0.1:3399, names ending _test. No commits, pushes or installs. No real Razorpay, SMS, SMTP or ERP calls. Prepared SQL only; escape all output. Work in small stages; stop on failure; run .\tools\check.ps1 after each stage. Short replies.
+
+Ponytail mode, always on: the smallest complete change; reuse existing code; no extra features, options, abstractions or dependencies; finish every caller and test your change breaks; never cut validation, security, error handling or anything I asked for; one small test for new money or security logic; end with 1-2 lines on what you skipped or did not check. UI work must match the Node site exactly: build what is asked.
+
+Environment: the site needs 127.0.0.1:3399 (MySQL), 127.0.0.1:8095 (scratch ERP) and 127.0.0.1:8100 (php -S 127.0.0.1:8100 -t public). I start the first two myself: cd "E:\Testing fashion store\flow-test"; .\start.ps1 -NoPayments. If products fail to load, check port 8095 first (Get-NetTCPConnection -State Listen -LocalPort 3399,8095,8100). Do not start those yourself and do not open config.local.php.

@@ -1,0 +1,17 @@
+.env
+*.env
+config.local.php
+vendor/
+node_modules/
+storage/
+*.log
+.claude/snapshots/
+.env.*
+keys/
+*.pem
+*.key
+error_log
+cache/
+log/
+mail-log/
+config.dev.php

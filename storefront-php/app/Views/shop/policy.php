@@ -1,0 +1,15 @@
+<?php
+declare(strict_types=1);
+
+use Pratyangi\Views\ShopInfo;
+use Pratyangi\Views\View;
+use Pratyangi\Web\HeaderAccount;
+
+/** @var HeaderAccount|null $account */
+/** @var string $pageTitle */
+/** @var string $intro */
+/** @var list<array{0:string,1:list<string>}> $sections */
+/** @var bool $contact the Contact page: the shop's details instead of sections */
+$account = $account ?? null;
+// A policy or contact page: the same header and footer as every page, one narrow column of text. The text is a draft until the shop owner reviews it.
+?><main class="pf_doc"><?php require dirname(__DIR__) . '/partials/header.php'; ?><article class="pf_docBody"><p class="pf_docDraft" role="note"><strong>DRAFT - to be reviewed</strong> This text is a placeholder until the shop has checked it.</p><h1><?= View::e($pageTitle) ?></h1><p class="pf_docLead"><?= View::e($intro) ?></p><?php foreach ($sections as [$heading, $paragraphs]) { ?><section><h2><?= View::e($heading) ?></h2><?php foreach ($paragraphs as $p) { ?><p><?= View::e($p) ?></p><?php } ?></section><?php } ?><?php if ($contact) { ?><dl class="pf_docContact"><dt>Name</dt><dd><?= View::e(ShopInfo::legalName()) ?></dd><?php if (ShopInfo::address() !== '') { ?><dt>Address</dt><dd><?= nl2br(View::e(ShopInfo::address()), false) ?></dd><?php } ?><?php if (ShopInfo::gstin() !== '') { ?><dt>GSTIN</dt><dd><?= View::e(ShopInfo::gstin()) ?></dd><?php } ?><?php if (ShopInfo::phone() !== '') { ?><dt>Phone</dt><dd><?php if (ShopInfo::phoneLink() !== '') { ?><a href="<?= View::e(ShopInfo::phoneLink()) ?>"><?= View::e(ShopInfo::phone()) ?></a><?php } else { echo View::e(ShopInfo::phone()); } ?></dd><?php } ?><?php if (ShopInfo::email() !== '') { ?><dt>Email</dt><dd><a href="mailto:<?= View::e(ShopInfo::email()) ?>"><?= View::e(ShopInfo::email()) ?></a></dd><?php } ?><?php if (ShopInfo::hours() !== '') { ?><dt>Hours</dt><dd><?= View::e(ShopInfo::hours()) ?></dd><?php } ?></dl><?php } ?></article><?php require dirname(__DIR__) . '/partials/footer.php'; ?></main>

@@ -1,0 +1,7 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Checkbox">
+<rect x="0.55" y="0.55" width="14.9" height="14.9" rx="1.45" fill="white"/>
+<rect x="0.55" y="0.55" width="14.9" height="14.9" rx="1.45" stroke="#BDBAB2" stroke-width="1.1"/>
+<path id="Vector" opacity="0" d="M4 8.5C4 8.5 5.5 8.5 7.5 12C7.5 12 13.059 2.833 18 1" stroke="#D4AF37" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</svg>

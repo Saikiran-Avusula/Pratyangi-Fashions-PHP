@@ -1,0 +1,18 @@
+{
+  "products": [
+    {"sku": "MOCK-SAR-001", "name": "Kanjivaram Silk Saree", "category": "Sarees", "fabric": "Silk", "pattern_name": null, "design_model": null, "color": "Maroon", "size": null, "mrp": "14999.00", "retail_price": "12999.00", "offer_price": "11499.00", "tax_rate": "5.00", "image_path": "uploads/products/mock-sar-001.jpg"},
+    {"sku": "MOCK-SAR-002", "name": "Cotton Handloom Saree", "category": "Sarees", "fabric": "Cotton", "pattern_name": null, "design_model": null, "color": "Indigo", "size": null, "mrp": "2499.00", "retail_price": "2499.00", "offer_price": "0.00", "tax_rate": "5.00", "image_path": "uploads/products/mock-sar-002.jpg"},
+    {"sku": "MOCK-KUR-001", "name": "Printed Cotton Kurti", "category": "Kurtis", "fabric": "Cotton", "pattern_name": null, "design_model": null, "color": "Teal", "size": "M", "mrp": "1499.00", "retail_price": "1199.50", "offer_price": null, "tax_rate": "5.00", "image_path": "uploads/products/mock-kur-001.jpg"},
+    {"sku": "MOCK-KUR-002", "name": "Embroidered Kurti (sold out)", "category": "Kurtis", "fabric": "Rayon", "pattern_name": null, "design_model": null, "color": "Pink", "size": "L", "mrp": "1799.00", "retail_price": "1799.00", "offer_price": null, "tax_rate": "5.00", "image_path": null},
+    {"sku": "MOCK-DUP-001", "name": "Chiffon Dupatta", "category": null, "fabric": "Chiffon", "pattern_name": null, "design_model": null, "color": "Mustard", "size": null, "mrp": "599.00", "retail_price": "599.00", "offer_price": null, "tax_rate": "12.00", "image_path": "../../etc/passwd"},
+    {"sku": "MOCK-ZERO-001", "name": "Unpriced Item (hidden)", "category": "Sarees", "fabric": null, "pattern_name": null, "design_model": null, "color": null, "size": null, "mrp": "0.00", "retail_price": "0.00", "offer_price": null, "tax_rate": "5.00", "image_path": null},
+    {"sku": "MOCK-BAD-001", "name": "Unreadable price (skipped)", "category": "Sarees", "fabric": null, "pattern_name": null, "design_model": null, "color": null, "size": null, "mrp": null, "retail_price": "12,99", "offer_price": null, "tax_rate": "5.00", "image_path": null}
+  ],
+  "stock": {
+    "MOCK-SAR-001": 4,
+    "MOCK-SAR-002": 25,
+    "MOCK-KUR-001": 12,
+    "MOCK-KUR-002": 0,
+    "MOCK-DUP-001": 7
+  }
+}

@@ -1,0 +1,23 @@
+# Apache: send every request that is not an existing file to index.php (the only entry point).
+Options -Indexes
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # never serve dotfiles (.htaccess, .env, .git ...)
+    RewriteRule (^|/)\. - [F,L]
+
+    # hand the Authorization header and the raw body to PHP
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+<IfModule mod_authz_core.c>
+    <FilesMatch "^\.">
+        Require all denied
+    </FilesMatch>
+</IfModule>

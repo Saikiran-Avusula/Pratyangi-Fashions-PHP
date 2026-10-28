@@ -1,0 +1,226 @@
+/* Small fixes on top of the compiled site CSS (copied from the built Node site). */
+body { margin: 0; }
+
+/* The menu, search dialog and try-on dialog are in the page from the start and opened by site.js; the compiled CSS gives them a display value, so [hidden] needs help. */
+.pSCCwa_menuPanel[hidden],
+.pSCCwa_menuBackdrop[hidden],
+.pSCCwa_scrim[hidden],
+._3CJUpq_scrim[hidden],
+._3CJUpq_secondary[hidden],
+.mdI9xa_scrim[hidden] { display: none; }
+
+/* New Arrivals: the filters, cards, empty box and pagination are in the page from the start and listing.js hides and shows them with [hidden]; the compiled CSS gives them a display value. */
+._4HCqHa_page [hidden] { display: none; }
+
+/* Sign-in and sign-up pages: the Email | Mobile OTP switch and the mobile code form (PHP-only addition; auth-otp.js). The compiled CSS gives the forms a display value, so [hidden] needs help. */
+.neurva_card [hidden] { display: none !important; }
+.pf_modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 0 0 18px; padding: 4px; background: #faf8f5; border: 1px solid #0000001f; border-radius: 6px; }
+.pf_mode { appearance: none; height: 40px; border: 0; border-radius: 4px; background: transparent; color: #4a3a36; font: 600 14px/1 var(--font-body, inherit); cursor: pointer; transition: background-color 0.2s, color 0.2s; }
+.pf_mode.pf_modeOn { background: #fff; color: var(--burgundy, #800020); box-shadow: 0 1px 3px #0000002b; }
+.pf_mode:focus-visible { outline: 2px solid var(--burgundy, #800020); outline-offset: 2px; }
+.neurva_prefix + input { flex: 1; min-width: 0; }
+
+/* Product cards lift 4px on hover in the web app (framer-motion whileHover y:-4, 0.22s); not with reduced motion. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .JEjkwq_card { transition: transform 0.22s ease-out; }
+  .JEjkwq_card:hover { transform: translateY(-4px); }
+}
+
+/* Account page (PHP-only additions): the email-code box, "Complete your account" (name, add mobile number, add email). account.js shows and hides the forms with [hidden]. */
+.pf_acct [hidden], .BVS4rq_notice [hidden] { display: none !important; }
+.pf_acct { padding-bottom: 8px; }
+.pf_acct_row { display: grid; gap: 10px; margin: 0 0 16px; }
+.pf_acct_form { display: grid; gap: 8px; max-width: 360px; margin: 6px 0 0; }
+.pf_acct_form label { font: 600 13px/1.3 var(--font-body, inherit); color: #4a3a36; }
+.pf_acct_form input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid #0000002e; border-radius: 6px; font: 400 15px/1.3 var(--font-body, inherit); background: #fff; }
+.pf_acct_form input:focus-visible { outline: 2px solid var(--burgundy, #800020); outline-offset: 1px; }
+.pf_acct_prefixed { display: flex; align-items: center; gap: 8px; }
+.pf_acct_prefixed > span { color: #4a3a36; font: 600 15px/1 var(--font-body, inherit); }
+.pf_acct .pf_acct_btn, .BVS4rq_notice .pf_acct_btn { appearance: none; min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--burgundy, #800020); color: #fff; font: 600 14px/1 var(--font-body, inherit); text-decoration: none; cursor: pointer; justify-self: start; margin-top: 0; }
+.pf_acct .pf_acct_btn:disabled, .BVS4rq_notice .pf_acct_btn:disabled { opacity: 0.6; cursor: progress; }
+.pf_acct_link { appearance: none; min-height: 44px; padding: 0; border: 0; background: none; color: var(--burgundy, #800020); font: 600 14px/1 var(--font-body, inherit); text-decoration: underline; cursor: pointer; }
+.pf_acct_link:disabled { opacity: 0.6; cursor: default; }
+.pf_acct_result { margin: 0; font-size: 14px; line-height: 1.5; color: #4a3a36; }
+.pf_acct_result[data-bad="1"] { color: #a1112f; }
+.pf_acct_row > .pf_acct_btn { justify-self: start; }
+
+/* ---- UI1: /account cleanup (all widths) ---- */
+.P71-SG_linkMuted.pf_linkBtn { appearance: none; border: 0; background: none; padding: 0; min-height: 44px; font: inherit; font-size: 13px; cursor: pointer; }
+.P71-SG_emptyState.pf_empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-start; gap: 4px 16px; padding: 12px 20px 16px; text-align: left; }
+.P71-SG_emptyState.pf_empty p { margin: 0; }
+.pf_acct_addresses { display: grid; gap: 12px; padding: 16px; }
+
+/* ---- UI1: phone (under 768px). Tap targets of at least 44px, the account sidebar as a tab bar above the content, a sticky buy button on /product and /bag ---- */
+@media (max-width: 767px) {
+  /* header: logo, search, bag and avatar stay on one row */
+  .pSCCwa_iconButton, .pSCCwa_accountLink, .pSCCwa_shopToggle { min-width: 44px; min-height: 44px; justify-content: center; }
+  .pSCCwa_searchButton { width: 44px; height: 44px; }
+
+  /* account: tab bar on top, content next, Logout last */
+  .pnvDaq_main { padding-top: 20px; }
+  .pnvDaq_layout { gap: 12px; margin-top: 16px; }
+  .pnvDaq_sidebar { display: contents; }
+  .pnvDaq_sidebar nav { order: 0; min-width: 0; }
+  .pnvDaq_content { order: 1; min-width: 0; }
+  .pnvDaq_logout { order: 2; height: 44px; }
+  .pnvDaq_navItem { min-height: 44px; padding: 0 14px; }
+  .P71-SG_linkMuted { min-height: 44px; }
+
+  /* other tap targets found by the 360 / 390 px check */
+  .FVHMJa_addAddress, .FVHMJa_remove, .FVHMJa_line select, .FVHMJa_addressActions button { min-height: 44px; min-width: 44px; }
+  .BpPmcW_continue, .BpPmcW_remove, .neurva_inlineLink, .YnyroG_seeAll { min-height: 44px; min-width: 44px; }
+  .JEjkwq_addToCart, .YnyroG_carouselArrow, ._4HCqHa_sidebarToggle, ._4HCqHa_page select { min-height: 44px; }
+  .YnyroG_carouselArrow { min-width: 44px; }
+
+  /* sticky buy button: Add to bag on /product, Proceed to Checkout on /bag */
+  ._4HCqHa_breadcrumb a, .udK_nG_back a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .YnyroG_offerCard button, ._3CJUpq_uploadButton, ._3CJUpq_tierButton, .BpPmcW_item button { min-height: 44px; min-width: 44px; }
+  .BpPmcW_secondary, .BpPmcW_secondary button { min-width: 0; max-width: 100%; white-space: normal; }
+  .udK_nG_page { padding-bottom: 88px; }
+  .udK_nG_add:not(.pf_wishText) { position: fixed; left: 16px; right: 16px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 40; margin: 0; padding: 0; box-shadow: 0 6px 20px #00000040; }
+  .BpPmcW_page { padding-bottom: 88px; }
+  .BpPmcW_checkout:not(:disabled) { position: fixed; left: 16px; right: 16px; bottom: max(12px, env(safe-area-inset-bottom)); z-index: 40; width: auto; max-width: none; height: 52px; box-shadow: 0 6px 20px #00000040; }
+}
+
+/* ---- UI2: the top bar of every page, footer links and company lines, policy and contact pages ---- */
+.pf_topbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 40px; padding: 4px 20px; background: var(--burgundy, #800020); color: #fff; font-size: 14px; line-height: 1.35; }
+.pf_topbar p { margin: 0; }
+.pf_topbar a { display: inline-flex; align-items: center; min-height: 32px; color: #fff; text-decoration: none; }
+.pf_topbar a:hover { text-decoration: underline; }
+@media (min-width: 961px) { .pf_topbar { padding: 0 64px; } }
+@media (max-width: 767px) { .pf_topbar { padding: 4px 16px; } .pf_topbar a { min-height: 44px; } }
+
+.f_viWW_footerColumn { gap: 0; }
+.f_viWW_footerColumn a { color: #e6e2da; font-size: 15px; line-height: 1.3; text-decoration: none; display: inline-flex; align-items: center; min-height: 28px; overflow-wrap: anywhere; }
+.f_viWW_footerColumn a:hover { text-decoration: underline; }
+.f_viWW_footerColumn span { overflow-wrap: anywhere; }
+@media (max-width: 767px) { .f_viWW_footerColumn a { min-height: 44px; } }
+.f_viWW_footerSocial a { min-width: 44px; min-height: 44px; }
+
+.pf_doc { background: var(--cream, #faf8f5); min-height: 100vh; }
+.pf_docBody { box-sizing: border-box; max-width: 760px; margin: 0 auto; padding: 32px 16px 56px; color: #3b2b27; font: 400 16px/1.65 var(--font-body, inherit); }
+.pf_docBody h1 { margin: 12px 0 8px; color: var(--burgundy, #800020); font: 600 30px/1.2 var(--font-display, inherit); }
+.pf_docBody h2 { margin: 28px 0 6px; color: #b77001; font: 600 20px/1.25 var(--font-display, inherit); }
+.pf_docBody p { margin: 0 0 10px; overflow-wrap: anywhere; }
+.pf_docBody a { color: var(--burgundy, #800020); }
+.pf_docLead { color: #5a5248; font-size: 17px; }
+.pf_docDraft { margin: 0 0 8px; padding: 10px 14px; border: 1px dashed #b77001; border-radius: 6px; background: #fff7e6; font-size: 14px; }
+.pf_docDraft strong { display: block; letter-spacing: 0.04em; }
+.pf_docContact { display: grid; grid-template-columns: max-content 1fr; gap: 10px 20px; margin: 24px 0 0; padding: 18px 20px; background: #fff; border: 1px solid #eadfc8; border-radius: 6px; }
+.pf_docContact dt { font-weight: 600; color: #5a5248; }
+.pf_docContact dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 480px) { .pf_docContact { grid-template-columns: 1fr; gap: 2px; } .pf_docContact dd { margin-bottom: 10px; } }
+
+/* every button and clickable item shows the hand */
+button:not(:disabled), [role="button"], summary, label[for], select, input[type="submit"], input[type="button"], input[type="checkbox"], input[type="radio"], input[type="range"], a[href] { cursor: pointer; }
+
+/* header search: live catalogue results replace the quick links from 2 characters */
+.pSCCwa_searchResults.pf_searchLive > a[data-pf-text] { display: none !important; }
+.pf_searchHit { display: grid; grid-template-columns: 48px 1fr auto; gap: 12px; align-items: center; padding: 8px 0; text-decoration: none; color: inherit; }
+.pf_searchHit img { width: 48px; height: 48px; object-fit: cover; border-radius: 4px; }
+.pf_empty .pf_acct_btn { display: inline-flex; align-items: center; justify-self: center; }
+
+/* wishlist hearts and the quick-view dialog */
+.JEjkwq_actionBtn.pf_wished { color: var(--burgundy, #800020); }
+.JEjkwq_actionBtn.pf_wished svg { fill: currentColor; }
+.udK_nG_add.pf_wishText { margin-top: 10px; background: transparent; color: var(--burgundy, #800020); border: 1px solid var(--burgundy, #800020); }
+.pf_qv_scrim { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.5); }
+.pf_qv { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: min(760px, 100%); max-height: 100%; overflow: auto; padding: 20px; background: #fff; border-radius: 8px; }
+.pf_qv_img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 6px; }
+.pf_qv_info { display: grid; align-content: start; gap: 8px; }
+.pf_qv_info h2 { margin: 0; font-size: 20px; }
+.pf_qv_sub, .pf_qv_line { margin: 0; color: #5a5248; font-size: 14px; }
+.pf_qv_out { color: #a00; }
+.pf_qv_price { margin: 0; display: flex; gap: 8px; align-items: baseline; font-size: 18px; }
+.pf_qv_price del { color: #7a7066; font-size: 14px; }
+.pf_qv_add, .pf_qv_wish { min-height: 44px; border-radius: 6px; font: 600 14px/1 var(--font-body, inherit); border: 1px solid var(--burgundy, #800020); }
+.pf_qv_add { background: var(--burgundy, #800020); color: #fff; }
+.pf_qv_add:disabled { opacity: 0.6; }
+.pf_qv_wish { background: transparent; color: var(--burgundy, #800020); }
+.pf_qv_link { color: var(--burgundy, #800020); text-align: center; padding: 8px 0; }
+.pf_qv_close { position: absolute; top: 6px; right: 10px; width: 44px; height: 44px; border: 0; background: transparent; font-size: 28px; line-height: 1; }
+@media (max-width: 600px) { .pf_qv { grid-template-columns: 1fr; padding: 16px; } .pf_qv_img { max-height: 40vh; aspect-ratio: auto; } }
+
+/* the wishlist page */
+.pf_wishlist { display: grid; gap: 12px; max-width: 760px; margin: 0; padding: 16px 0; }
+.pf_wishlist_note { margin: 0; color: #5a5248; }
+.pf_wishlist_row { display: grid; grid-template-columns: 72px 1fr; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid #eadfc8; }
+.pf_wishlist_img { width: 72px; height: 96px; object-fit: cover; border-radius: 4px; }
+.pf_wishlist_name { color: inherit; font-weight: 600; text-decoration: none; }
+.pf_wishlist_price { margin: 4px 0 0; color: #5a5248; }
+.pf_wishlist_actions { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; }
+.pf_wishlist .pf_acct_btn { appearance: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 6px; background: var(--burgundy, #800020); color: #fff; font: 600 14px/1 var(--font-body, inherit); text-decoration: none; justify-self: start; }
+.pf_wishlist .pf_acct_link { appearance: none; min-height: 44px; border: 0; background: none; color: var(--burgundy, #800020); font: 600 14px/1 var(--font-body, inherit); text-decoration: underline; }
+
+
+/* the shared empty state (partials/empty_state.php and PratyangiEmptyState in site.js): centred in its area, one look at every width */
+.pf_emptyState { display: grid; justify-items: center; align-content: center; gap: 12px; box-sizing: border-box; width: 100%; min-height: min(60vh, 480px); padding: 40px 16px; text-align: center; }
+.pf_emptyState svg { color: var(--burgundy, #800020); opacity: 0.85; }
+.pf_emptyState h2 { margin: 0; font: 600 20px/1.3 var(--font-display, Georgia, serif); color: #3b2b27; }
+.pf_emptyState p { margin: 0; max-width: 34ch; color: #5a5248; font-size: 15px; line-height: 1.5; }
+.pf_emptyActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-top: 8px; }
+.pf_emptyBtn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 24px; border: 1px solid var(--burgundy, #800020); border-radius: 6px; background: var(--burgundy, #800020); color: #fff; font: 600 14px/1 var(--font-body, inherit); text-decoration: none; }
+.pf_emptyBtn.pf_emptyGhost { background: transparent; color: var(--burgundy, #800020); }
+
+/* the wishlist heart is the first action beside the bag; up to 1200px the search is the round icon (as on a phone) so the logo keeps clear of the four actions */
+@media (min-width: 701px) and (max-width: 1200px) { .pSCCwa_searchButton { width: 40px; padding: 0; border: 0; border-radius: 50%; justify-content: center; } .pSCCwa_searchButton span { display: none; } }
+@media (min-width: 1201px) and (max-width: 1500px) { .pSCCwa_searchButton { width: 120px; } }
+
+/* "Continue with Google" under the sign-in and sign-up forms */
+.pf_google { display: grid; gap: 12px; margin: 4px 0 20px; }
+.pf_googleOr { display: flex; align-items: center; gap: 12px; margin: 0; color: #7a7066; font-size: 13px; }
+.pf_googleOr::before, .pf_googleOr::after { content: ""; flex: 1; height: 1px; background: #eadfc8; }
+.pf_googleButton { display: flex; justify-content: center; min-height: 44px; }
+.pf_googleNote { margin: 0; color: #7a7066; font-size: 12px; line-height: 1.5; text-align: center; }
+.pf_googleNote a { color: var(--burgundy, #800020); }
+
+/* header actions: one icon family (lucide outline), one size, one stroke; beats the copied web rules that sized the 1st/2nd link by position */
+.pSCCwa_headerActions .pSCCwa_iconButton svg { width: 24px !important; height: 24px !important; margin: 0 !important; stroke-width: 2; }
+@media (max-width: 1200px) { .pSCCwa_headerActions .pSCCwa_searchButton svg { width: 24px; height: 24px; } }
+
+/* ---- M1: mobile-first audit fixes (tests/browser_layout_test.php) ---- */
+/* tap targets, three kinds (checked by tests/browser_layout_test.php). 1) real 44px boxes: buttons, links styled as buttons, inputs, header icons, dialog close buttons */
+.pSCCwa_shopToggle, .pSCCwa_iconButton, .pSCCwa_searchButton, .pSCCwa_accountLink, .pSCCwa_brand, .pSCCwa_closeButton, .mdI9xa_close,
+.pf_mode, .JEjkwq_addToCart, .YnyroG_offerCard button, ._3CJUpq_uploadButton, ._3CJUpq_tierButton, .ZxDzjq_reset, .ZxDzjq_presets button, ._4HCqHa_colorChip,
+._4HCqHa_sidebarToggle, .YnyroG_carouselArrow, .BpPmcW_secondary button, .FVHMJa_addAddress, .FVHMJa_remove, .FVHMJa_backLink,
+#catalog-search, .mdI9xa_field input, .mdI9xa_phone input, .mdI9xa_selectWrap select, ._4HCqHa_sortField select, .FVHMJa_qty select,
+.neurva_switch a, .BpPmcW_details h2 a, .pf_wishlist_name, .JEjkwq_meta h3 a, .udK_nG_back a, ._4HCqHa_breadcrumb a, .YnyroG_seeAll, .P71-SG_linkMuted, .neurva_inlineLink,
+.BpPmcW_continue, .pf_qv_link, .f_viWW_footerColumn a, .pf_topbarLinks a, .pSCCwa_menuGroup a { min-height: 44px; min-width: 44px; }
+/* links that stand alone on a line, and checkbox/radio rows, are boxes of their own (a link inside a sentence stays inline) */
+.neurva_switch a, .BpPmcW_details h2 a, .pf_wishlist_name, .JEjkwq_meta h3 a, .udK_nG_back a, ._4HCqHa_breadcrumb a, .YnyroG_seeAll, .P71-SG_linkMuted, .neurva_inlineLink,
+.BpPmcW_continue, .pf_qv_link, .f_viWW_footerColumn a, .pf_topbarLinks a, .pSCCwa_menuGroup a, .pSCCwa_accountLink { display: inline-flex; align-items: center; justify-content: center; }
+.f_viWW_footerColumn a, .pSCCwa_menuGroup a, ._4HCqHa_breadcrumb a, .pf_topbarLinks a { justify-content: flex-start; }
+:where(label:has(> input[type=checkbox]), label:has(> input[type=radio])) { min-height: 44px; display: flex; align-items: center; gap: 8px; }
+:where(summary) { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+/* 2) small parts keep their look and get an invisible 44px area around their centre */
+.BpPmcW_quantity button { min-height: 0; min-width: 0; } /* beats the generic item-button size above: only the invisible area is 44px */
+.JEjkwq_actionBtn, .BpPmcW_quantity button { position: relative; }
+.JEjkwq_actions { gap: 12px; } /* 32px buttons: their 44px areas must not overlap */
+.BpPmcW_quantity { overflow: clip; overflow-clip-margin: 4px; } /* still rounded, but the 44px area of the buttons is not cut off */
+.JEjkwq_actionBtn::after, .BpPmcW_quantity button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.ZxDzjq_slider { height: 44px; }
+.ZxDzjq_handle::-webkit-slider-thumb { margin-top: 8px; }
+
+/* header on a phone: menu, logo, then search, wishlist, bag, account (44px each); the logo takes what is left and drops its name at 320 */
+@media (max-width: 700px) {
+  .pSCCwa_headerInner, .pSCCwa_headerActions { gap: 0; }
+  .pSCCwa_headerInner { padding: 0 4px; }
+  .pSCCwa_brand { min-width: 44px; gap: 6px; }
+  .pSCCwa_brandLogo { width: 36px; height: 36px; }
+  .pSCCwa_brandName { font-size: 10px; }
+  .pSCCwa_iconButton, .pSCCwa_searchButton { padding: 0; }
+}
+@media (max-width: 359px) { .pSCCwa_brandText { display: none; } }
+
+/* sign-in card: everything as wide as the card, no reserved error row between the fields */
+.neurva_card :where(input:not([type=checkbox], [type=radio]), select, .pf_google, .pf_googleOr, .neurva_control, .neurva_otp) { width: 100%; box-sizing: border-box; }
+.neurva_messageSlot { min-height: 0; }
+
+/* account panels: the body (forms, FAQ) lines up with the panel title instead of touching the border */
+.P71-SG_panel > .pf_acct_row, .P71-SG_panel > h3, .P71-SG_panel > details, .P71-SG_panel > .pf_docContact { margin-left: 20px; margin-right: 20px; }
+.P71-SG_panel > details:last-child, .P71-SG_panel > .pf_acct_row:last-child { margin-bottom: 20px; }
+
+/* the Shop menu now has a fourth group (Collections): one more column instead of a second row */
+@media (min-width: 701px) { .pSCCwa_menuPanel { grid-template-columns: repeat(4, max-content); } }
+@media (min-width: 1100px) { .pSCCwa_menuPanel { grid-template-columns: 260px 224px 200px auto; } }
+.JEjkwq_soldOutBadge { pointer-events: none; } /* a label must not steal taps from the card buttons beside it */
