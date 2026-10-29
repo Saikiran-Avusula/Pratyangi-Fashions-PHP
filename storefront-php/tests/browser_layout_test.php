@@ -49,6 +49,11 @@ $pages = [
     ['refund-policy', '/refund-policy', ''],
     ['shipping-policy', '/shipping-policy', ''],
     ['contact', '/contact', ''],
+    ['error-404', '/no-such-page', ''],
+    ['error-403', '/__e/403', ''],
+    ['error-429', '/__e/429', ''],
+    ['error-500', '/__e/500', ''],
+    ['error-503', '/__e/503', ''],
 ];
 
 $pdo = DbGuard::connect();
@@ -101,6 +106,15 @@ function measure(w) {
     if (el.tagName === 'A' && /^inline/.test(w.getComputedStyle(el).display) && Array.from(el.parentElement.childNodes).some(n => n.nodeType === 3 && n.textContent.trim())) continue;
     const bw = el === d.activeElement || b !== r ? b.width : (el.offsetWidth || b.width), bh = b !== r ? b.height : (el.offsetHeight || b.height); // offset sizes ignore an entrance animation's scale
     if (bw < 43.5 || bh < 43.5) { const bad = owns44(el); if (bad) out.push(['tap', sel(el), Math.round(bw) + 'x' + Math.round(bh) + ' ' + bad]); }
+  }
+  // header (stage H1): from 768px at least 24px between the logo and the menu and between the logo and the icons; never touching at any width; on phones from 390px the logo is in the middle
+  const hdr = d.querySelector('.pSCCwa_headerInner');
+  if (hdr) {
+    const box = s => { const e = hdr.querySelector(s); return e && e.checkVisibility() ? e.getBoundingClientRect() : null; };
+    const menu = box('.pSCCwa_shopToggle'), brand = box('.pSCCwa_brand'), icons = box('.pSCCwa_headerActions'), need = W >= 768 ? 24 : 0;
+    if (brand && menu && brand.left - menu.right < need - 0.5) out.push(['header', 'logo-menu-gap', Math.round(brand.left - menu.right) + 'px at ' + W]);
+    if (brand && icons && icons.left - brand.right < need - 0.5) out.push(['header', 'logo-icons-gap', Math.round(icons.left - brand.right) + 'px at ' + W]);
+    if (brand && W >= 390 && W <= 700 && Math.abs((brand.left + brand.right) / 2 - W / 2) > 6) out.push(['header', 'logo-not-centred', Math.round((brand.left + brand.right) / 2) + ' of ' + W]);
   }
   return out;
 }

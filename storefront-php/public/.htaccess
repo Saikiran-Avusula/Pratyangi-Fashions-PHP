@@ -1,9 +1,19 @@
 # Apache: send every request that is not an existing file to index.php (the only entry point).
 Options -Indexes
+ErrorDocument 403 /errors/403.html
+ErrorDocument 404 /errors/404.html
+ErrorDocument 500 /errors/500.html
+ErrorDocument 503 /errors/503.html
 DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # always https (on the live server; localhost stays plain http for local runs)
+    RewriteCond %{HTTPS} off
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https
+    RewriteCond %{HTTP_HOST} !^(localhost|127\.0\.0\.1)(:|$)
+    RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 
     # never serve dotfiles (.htaccess, .env, .git ...)
     RewriteRule (^|/)\. - [F,L]
@@ -19,5 +29,12 @@ DirectoryIndex index.php
 <IfModule mod_authz_core.c>
     <FilesMatch "^\.">
         Require all denied
+    </FilesMatch>
+</IfModule>
+
+# pictures, styles and scripts may be kept by the browser for a day (they are versioned by hand: change the file name when you change a file)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(css|js|svg|png|jpe?g|webp|woff2?)$">
+        Header set Cache-Control "public, max-age=86400"
     </FilesMatch>
 </IfModule>

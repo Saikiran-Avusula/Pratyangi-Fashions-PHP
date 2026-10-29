@@ -7,7 +7,7 @@ namespace Pratyangi\Views;
 final class CatalogHtml
 {
     /** What a visitor sees when the catalogue cannot be read (never the reason). */
-    public const UNAVAILABLE = 'We could not load products right now. Please try again in a moment.';
+    public const UNAVAILABLE = 'Products are being updated. Please try again in a moment.';
     public const EMPTY = 'No products are available right now. Please check back soon.';
     public const NOT_FOUND = 'We could not find this product. It may no longer be sold.';
 

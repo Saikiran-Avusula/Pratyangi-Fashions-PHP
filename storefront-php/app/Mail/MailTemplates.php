@@ -41,7 +41,8 @@ final class MailTemplates
     }
 
     /**
-     * @param list<string|array{code:string,note:string}> $paragraphs plain text (escaped here); an array is the code box
+     * @param list<string|array{code:string,note:string}|array{rows:list<list<string>>,head?:bool,strong?:bool}> $paragraphs plain text (escaped here); an array with a code is the code box,
+     *        one with rows is a small table (head = first row is a header, strong = last row is bold; the last column is right-aligned)
      * @param array{label:string,url:string}|null $button
      * @return array{text:string,html:string}
      */
@@ -58,12 +59,27 @@ final class MailTemplates
         $body = '<p style="' . $p . '">' . $e($greeting) . '</p>';
         $text = [$title, '', $greeting, ''];
         foreach ($paragraphs as $para) {
-            if (is_array($para)) {
+            if (is_array($para) && isset($para['rows'])) {
+                $body .= '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 20px;border-collapse:collapse;">';
+                $last = count($para['rows']) - 1;
+                foreach ($para['rows'] as $i => $row) {
+                    $bold = (!empty($para['head']) && $i === 0) || (!empty($para['strong']) && $i === $last);
+                    $body .= '<tr>';
+                    foreach ($row as $c => $cell) {
+                        $end = $c === count($row) - 1;
+                        $body .= '<td valign="top" style="padding:8px 0;border-bottom:1px solid #eadfc8;font-family:' . self::FONT . ';font-size:15px;line-height:1.4;color:' . self::INK . ';text-align:' . ($end && count($row) > 1 ? 'right' : 'left') . ';' . ($end && count($row) > 1 ? 'padding-left:12px;white-space:nowrap;' : '') . ($bold ? 'font-weight:bold;' : '') . '">' . $e($cell) . '</td>';
+                    }
+                    $body .= '</tr>';
+                    $text[] = implode('  ', $row);
+                }
+                $body .= '</table>';
+            } elseif (is_array($para)) {
                 $body .= '<p style="margin:20px 0;text-align:center;"><span style="display:inline-block;padding:12px 24px;background:#ffffff;border:1px solid #eadfc8;border-radius:6px;font-family:' . self::FONT . ';color:' . self::BURGUNDY . ';font-size:30px;font-weight:bold;letter-spacing:8px;">' . $e($para['code']) . '</span></p>'
                     . '<p style="' . $p . 'font-size:14px;text-align:center;">' . $e($para['note']) . '</p>';
                 $text[] = "Your code is {$para['code']}. {$para['note']}";
             } else {
-                $body .= '<p style="' . $p . '">' . $e($para) . '</p>';
+                // a non-breaking hyphen keeps an order number such as PF-10021 on one line (HTML only; the text version is unchanged)
+                $body .= '<p style="' . $p . '">' . preg_replace('/\b([A-Z]{2,4})-(\d{3,})\b/', '$1&#8209;$2', $e($para)) . '</p>';
                 $text[] = $para;
             }
             $text[] = '';
@@ -81,9 +97,9 @@ final class MailTemplates
             [$label, $w, $h] = self::ICONS[$network];
             $icons .= '<td style="padding:0 8px;"><a href="' . $e($url) . '">' . $img($site . '/assets/images/brand/mail/' . $network . '.png', $label, $w, $h) . '</a></td>';
         }
-        $company = '<strong>' . $e(ShopInfo::legalName()) . '</strong>';
-        if (ShopInfo::address() !== '') {
-            $company .= '<br>' . nl2br($e(ShopInfo::address()), false);
+        $company = '<strong>' . $e(ShopInfo::brandLine()) . '</strong>';
+        if (ShopInfo::cin() !== '') {
+            $company .= '<br>CIN: ' . $e(ShopInfo::cin());
         }
         $support = ShopInfo::email() === '' ? '' : '<p style="margin:0 0 12px;"><a href="mailto:' . $e(ShopInfo::email()) . '" style="color:' . self::BURGUNDY . ';">' . $e(ShopInfo::email()) . '</a></p>';
         // one picture, linked to the shop: the navbar logo as it looks on the site (fallback: the emblem and the name as text)
@@ -106,7 +122,7 @@ final class MailTemplates
             . '<p style="margin:0 0 12px;">' . $company . '</p><p style="margin:0;">' . $e($because) . '</p></td></tr>'
             . '</table></td></tr></table></body></html>';
 
-        $lines = array_filter([ShopInfo::legalName(), ShopInfo::address(), ShopInfo::email() !== '' ? 'Support: ' . ShopInfo::email() : '']);
+        $lines = array_filter([ShopInfo::brandLine(), ShopInfo::cin() !== '' ? 'CIN: ' . ShopInfo::cin() : '', ShopInfo::email() !== '' ? 'Support: ' . ShopInfo::email() : '']);
         return ['text' => implode("\n", $text) . "\n--\n" . implode("\n", $lines) . "\n\n" . $because, 'html' => $html];
     }
 }

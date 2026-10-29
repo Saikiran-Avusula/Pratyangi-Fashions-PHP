@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Pratyangi\Auth;
 
 use Pratyangi\Http\ApiException;
+use Pratyangi\Mail\EventMail;
 use Pratyangi\Security\Passwords;
 use Pratyangi\Security\Tokens;
 use Pratyangi\Support\Clock;
@@ -12,8 +13,9 @@ use Pratyangi\Support\Logger;
 /** Sign-up, sign-in, sessions and the old email-link verification. Messages follow the Node API except where docs/API_CONTRACT.md 11.3 says otherwise. */
 final class AuthService
 {
-    public const UNKNOWN_EMAIL = 'We could not find an account with this email.';
-    public const WRONG_PASSWORD = 'Incorrect password.';
+    // one answer for an unknown email and a wrong password: no account enumeration
+    public const BAD_CREDENTIALS = 'Email or password is incorrect';
+    public const GOOGLE_ONLY = 'This account uses Google sign-in';
     public const EMAIL_TAKEN = 'An account with this email already exists.';
 
     public function __construct(
@@ -24,6 +26,7 @@ final class AuthService
         private int $sessionDays,
         private Clock $clock,
         private ?Logger $logger = null,
+        private ?EventMail $mail = null,
     ) {
     }
 
@@ -56,6 +59,7 @@ final class AuthService
         }
         $started = $this->start($row, $userAgent);
         $this->logger?->channel('auth')->info('signup success', ['customer_id' => $id, 'outcome' => 'success']);
+        $this->mail?->welcome($id, $input['email'], $input['name']);
         return $started;
     }
 
@@ -69,19 +73,18 @@ final class AuthService
         if ($row === null) {
             Passwords::verifyAgainstDecoy($input['password']);
             $this->logger?->channel('auth')->warn('sign-in failure', ['method' => 'password', 'reason' => 'account_not_found', 'outcome' => 'failure']);
-            throw new ApiException(404, self::UNKNOWN_EMAIL, 'email', null, 'account_not_found');
+            throw new ApiException(401, self::BAD_CREDENTIALS, null, null, 'invalid_credentials');
         }
         if (($row['password_hash'] ?? null) === null) {
             $this->logger?->channel('auth')->warn('sign-in failure', ['method' => 'password', 'reason' => 'no_password', 'outcome' => 'failure']);
-            throw ApiException::unauthorized(
-                ($row['mobile'] ?? null) !== null
-                    ? 'This account has no password yet. Sign in with a mobile code, or choose Forgot password to add a password.'
-                    : 'This account signs in with Google. Please use Continue with Google, or choose Forgot password to add a password.',
-            );
+            // a mobile-code account has no Google link: say nothing more than the generic answer
+            throw ($row['mobile'] ?? null) !== null
+                ? new ApiException(401, self::BAD_CREDENTIALS, null, null, 'invalid_credentials')
+                : new ApiException(401, self::GOOGLE_ONLY, null, null, 'google_account');
         }
         if (!Passwords::verify((string) $row['password_hash'], $input['password'])) {
             $this->logger?->channel('auth')->warn('sign-in failure', ['method' => 'password', 'reason' => 'wrong_password', 'outcome' => 'failure']);
-            throw new ApiException(401, self::WRONG_PASSWORD, 'password');
+            throw new ApiException(401, self::BAD_CREDENTIALS, null, null, 'invalid_credentials');
         }
         $started = $this->start($row, $userAgent);
         $this->logger?->channel('auth')->info('sign-in success', ['method' => 'password', 'customer_id' => (int) $row['id'], 'outcome' => 'success']);
@@ -115,6 +118,7 @@ final class AuthService
     {
         $linked = 'This Google account is already linked. Please try again.';
         $now = $this->clock->now();
+        $created = false;
         $this->pdo->beginTransaction();
         try {
             $row = $this->customers->findByIdentity('google', $g['sub']);
@@ -140,6 +144,7 @@ final class AuthService
                     if (!$this->customers->linkIdentity($id, 'google', $g['sub'])) {
                         throw ApiException::conflict($linked);
                     }
+                    $created = true;
                 }
                 if ($g['picture'] !== null) {
                     $this->customers->setPicture($id, $g['picture']);
@@ -157,6 +162,9 @@ final class AuthService
             throw new \RuntimeException('the Google customer could not be read back');
         }
         $this->logger?->channel('auth')->info('sign-in success', ['method' => 'google', 'customer_id' => (int) $row['id'], 'outcome' => 'success']);
+        if ($created) {
+            $this->mail?->welcome((int) $row['id'], $g['email'], (string) ($row['name'] ?? ''));
+        }
         return $this->start($row, $userAgent);
     }
 

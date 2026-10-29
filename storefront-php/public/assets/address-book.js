@@ -7,6 +7,11 @@
   'use strict';
 
   var doc = win.document;
+  // the tick box at checkout: a tick records the choice at once (it is never ticked for the visitor and an untick does not undo an earlier yes)
+  (function initOffers() {
+    var box = doc.querySelector('[data-pf-offers="checkout"]');
+    if (box && win.PratyangiOffers) box.addEventListener('change', function () { win.PratyangiOffers.save('checkout', box.checked); });
+  })();
   (function initAddressBook() {
     var checkoutPage = !!doc.querySelector('[data-pf-bag-page="checkout"]');
     var modal = doc.querySelector('[data-pf-address-modal]');
@@ -215,7 +220,9 @@
           if (res.ok) {
             closeModal();
             try { win.sessionStorage.setItem('pf-select-address', String((res.data.address || {}).id || addrId)); } catch (x) { /* no storage: the list just reloads */ }
-            win.location.reload();
+            var offersBox = doc.querySelector('[data-pf-field="offers"]');
+            var saved = offersBox && offersBox.checked && win.PratyangiOffers ? win.PratyangiOffers.save('address', true) : win.Promise.resolve();
+            saved.then(function () { win.location.reload(); }); // the choice is stored before the page reloads
           } else if (res.status === 422 && res.data.errors) {
             showFieldErrors(res.data.errors);
           } else {

@@ -5,6 +5,7 @@ namespace Pratyangi\Auth;
 
 use Pratyangi\Http\ApiException;
 use Pratyangi\Http\Context;
+use Pratyangi\Mail\EventMail;
 use Pratyangi\Security\Passwords;
 use Pratyangi\Support\Clock;
 use Pratyangi\Support\Logger;
@@ -30,6 +31,7 @@ final class AccountService
         private Clock $clock,
         private ?Logger $logger = null,
         private bool $smsEnabled = true,
+        private ?EventMail $mail = null,
     ) {
     }
 
@@ -188,6 +190,7 @@ final class AccountService
             $this->otp->endResetCodes($customerId);
         });
         $this->logger?->channel('auth')->info('reset success', ['channel' => $channel, 'customer_id' => $customerId, 'outcome' => 'success']);
+        $this->mail?->passwordChanged($customerId, (string) ($row['email'] ?? ''), (string) ($row['name'] ?? ''));
     }
 
     /**

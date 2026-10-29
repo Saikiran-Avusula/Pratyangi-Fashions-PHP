@@ -173,7 +173,8 @@ $t->test('email sign-up: signed in at once, no code is emailed until asked (rese
     $cookie = $cookieOf($r);
     $t->ok($cookie !== '', 'signed in');
     $t->same(200, $call('GET', '/auth/me', null, $cookie)->status());
-    $t->same(0, $mailbox->countTo('asha@example.com'), 'sign-up sends no code');
+    $t->same(1, $mailbox->countTo('asha@example.com'), 'sign-up sends the welcome mail and no code');
+    $t->same('', $mailbox->lastCodeTo('asha@example.com'), 'no code until asked');
     $t->same(200, $call('POST', '/auth/email/resend', [], $cookie)->status());
     $code = $mailbox->lastCodeTo('asha@example.com');
     $t->same(1, preg_match('/^\d{6}$/D', $code));
@@ -197,7 +198,7 @@ $t->test('email sign-up: signed in at once, no code is emailed until asked (rese
 
 $t->test('email sign-up: a registered address is a clear 409; a failing mailer or none still creates the account', function () use ($t, $call, $mailbox, $makeApp, $loose, $phone, $count): void {
     $r = $call('POST', '/auth/signup', ['name' => 'Again', 'email' => 'asha@example.com', 'password' => 'Saree2026']);
-    $t->same([409, 'An account with this email already exists.', 'email'], [$r->status(), $r->decoded()['message'], $r->decoded()['field']]);
+    $t->same([409, 'An account with this email already exists.', 'email'], [$r->status(), $r->decoded()['message'], $r->decoded()['field'] ?? null]);
     $mailbox->fail = true;
     $r = $call('POST', '/auth/signup', ['name' => 'Down Mail', 'email' => 'downmail@example.com', 'password' => 'Saree2026']);
     $mailbox->fail = false;
@@ -248,9 +249,23 @@ $t->test('email sign-in: an unverified user signs in normally; unknown email and
     $t->same(200, $r->status());
     $t->same(false, $r->decoded()['user']['emailVerified'], 'no verification step at sign-in');
     $r = $call('POST', '/auth/login', ['email' => 'plain@example.com', 'password' => 'Wrong2026']);
-    $t->same([401, 'Incorrect password.', 'password'], [$r->status(), $r->decoded()['message'], $r->decoded()['field']]);
+    $t->same([401, 'Email or password is incorrect', null], [$r->status(), $r->decoded()['message'], $r->decoded()['field'] ?? null]);
     $r = $call('POST', '/auth/login', ['email' => 'ghost@example.com', 'password' => 'Saree2026']);
-    $t->same([404, 'We could not find an account with this email.', 'email', 'account_not_found'], [$r->status(), $r->decoded()['message'], $r->decoded()['field'], $r->decoded()['code']]);
+    $t->same([401, 'Email or password is incorrect', null, 'invalid_credentials'], [$r->status(), $r->decoded()['message'], $r->decoded()['field'] ?? null, $r->decoded()['code']]);
+});
+
+$t->test('signup -> logout -> login with the same email works, whatever the case or spaces; Google-only and unknown accounts get their own answers', function () use ($t, $call, $signup, $pdo): void {
+    foreach (['Mixed.Case@Example.com' => ['mixed.case@example.com', 'MIXED.CASE@EXAMPLE.COM'], 'pad@example.com' => ['  pad@example.com  ', 'pad@example.com'], 'first.last.x@gmail.com' => ['first.last.x@gmail.com', 'First.Last.X@Gmail.com']] as $email => $logins) {
+        [$cookie] = $signup($email);
+        $t->same(204, $call('POST', '/auth/logout', [], $cookie)->status());
+        foreach ($logins as $typed) {
+            $t->same(200, $call('POST', '/auth/login', ['email' => $typed, 'password' => 'Saree2026'])->status(), 'login as [' . $typed . '] after signup as ' . $email);
+        }
+    }
+    $pdo->prepare('INSERT INTO shop_customers (name, email, password_hash, email_verified_at) VALUES (?, ?, NULL, NOW())')->execute(['G', 'googleonly@example.com']);
+    $r = $call('POST', '/auth/login', ['email' => 'googleonly@example.com', 'password' => 'Saree2026']);
+    $t->same([401, 'This account uses Google sign-in'], [$r->status(), $r->decoded()['message']]);
+    $t->same('google_account', $r->decoded()['code'] ?? null);
 });
 
 $t->test('email sign-in: per-address limit (10 in 15 minutes, counted for every address) on top of the per-IP limit', function () use ($t, $makeApp, $mailbox, $phone, $count): void {
@@ -259,9 +274,9 @@ $t->test('email sign-in: per-address limit (10 in 15 minutes, counted for every 
     for ($i = 0; $i < 12; $i++) {
         $statuses[] = $limited->handle(Helpers::request('POST', '/api/v1/auth/login', ['Origin' => Helpers::ORIGIN], ['email' => 'limit-me@example.com', 'password' => 'Wrong2026'], '192.0.2.' . ($i + 1)))->status();
     }
-    $t->same([404, 404, 404, 404, 404, 404, 404, 404, 404, 404, 429, 429], $statuses, 'the 11th try for one address is refused whatever the IP');
+    $t->same([401, 401, 401, 401, 401, 401, 401, 401, 401, 401, 429, 429], $statuses, 'the 11th try for one address is refused whatever the IP');
     $other = $limited->handle(Helpers::request('POST', '/api/v1/auth/login', ['Origin' => Helpers::ORIGIN], ['email' => 'someone-else@example.com', 'password' => 'Wrong2026'], '192.0.2.99'));
-    $t->same(404, $other->status(), 'another address is counted on its own');
+    $t->same(401, $other->status(), 'another address is counted on its own');
     // per IP: 10 in 15 minutes
     $byIp = $makeApp(['signup' => 100000], $mailbox, $phone);
     $codes = [];
@@ -318,7 +333,7 @@ $t->test('adding an email to a mobile account: stored and verified after the cod
     [$cookie, $id] = $mobileUser('9810000020');
     $next();
     $r = $call('POST', '/auth/email/link/request', ['email' => 'Taken@Example.com'], $cookie);
-    $t->same([409, 'This email is already linked to another account.', 'email'], [$r->status(), $r->decoded()['message'], $r->decoded()['field']]);
+    $t->same([409, 'This email is already linked to another account.', 'email'], [$r->status(), $r->decoded()['message'], $r->decoded()['field'] ?? null]);
     $t->same(422, $call('POST', '/auth/email/link/request', ['email' => 'nope'], $cookie)->status());
     $t->same(401, $call('POST', '/auth/email/link/request', ['email' => 'new@example.com'])->status());
     $r = $call('POST', '/auth/email/link/request', ['email' => 'New.Mobile@Example.com'], $cookie);
@@ -423,7 +438,7 @@ $t->test('forgot password: the answer, status, limits and headers are identical 
     $t->same($known, $unverified, 'email: known = unverified');
     $t->same(200, $known[0]);
     $t->same('{"message":"If an account matches, we have emailed a 6-digit code."}', $known[1]);
-    $t->same(1, $mailbox->countTo('known@example.com') - 1, 'the known address got exactly one reset mail (plus its sign-up code)');
+    $t->same(1, $mailbox->countTo('known@example.com') - 2, 'the known address got exactly one reset mail (plus its welcome and sign-up code)');
     $t->same(0, $mailbox->countTo('ghost@example.com'));
     $kn = $shape($call('POST', '/auth/password/forgot', ['channel' => 'mobile', 'mobile' => '9810000051']));
     $un = $shape($call('POST', '/auth/password/forgot', ['channel' => 'mobile', 'mobile' => '9810000099']));
@@ -566,7 +581,7 @@ $t->test('SMS_ENABLED=true: a code goes to ONE channel only; a verified email ta
     [$mails, $texts] = [count($mailbox->sent), count($phone->sent)];
     [$cookie] = $signup('onechannel@example.com');
     $call('POST', '/auth/email/resend', [], $cookie); // sign-up sends no code; asking for one does
-    $t->same([$mails + 1, $texts], [count($mailbox->sent), count($phone->sent)], 'an email sign-up code: one mail, no SMS');
+    $t->same([$mails + 2, $texts], [count($mailbox->sent), count($phone->sent)], 'an email sign-up: the welcome and one code mail, no SMS');
     $t->contains('data-pf="link-open"', $page('/account', $cookie)->body(), 'Add mobile is offered');
     $t->contains('pf-panel-otp', $page('/login')->body(), 'the Mobile OTP form is on the sign-in page');
     // an account with a verified email AND a verified mobile: the mobile reset sends nothing (the email is the reset channel); the answer is the same

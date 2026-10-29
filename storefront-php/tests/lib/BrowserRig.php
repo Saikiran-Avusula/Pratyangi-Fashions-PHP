@@ -33,11 +33,19 @@ if ($path !== "/" && is_file($file)) {
 ob_start(); // DbGuard prints a banner; it must not land in the page
 $pdo = DbGuard::connect();
 ob_end_clean();
-$config = Helpers::config(["SMS_ENABLED" => getenv("PF_CC_SMS") ?: "true", "SMS_MODE" => "log", "SMS_LOG_PATH" => ' . var_export($tmp . '/sms.log', true) . ', "MAIL_LOG_PATH" => ' . var_export($tmp . '/mail.log', true) . ', "OTP_PEPPER" => str_repeat("S", 48)]);
+$config = Helpers::config(["SMS_ENABLED" => getenv("PF_CC_SMS") ?: "true", "SMS_MODE" => "log", "SMS_LOG_PATH" => ' . var_export($tmp . '/sms.log', true) . ', "MAIL_LOG_PATH" => ' . var_export($tmp . '/mail.log', true) . ', "OTP_PEPPER" => str_repeat("S", 48),
+    // the real company details, so the footer and /contact are drawn in full (an apostrophe, comma, # and & in the Grievance Officer prove the escaping)
+    "SHOP_LEGAL_NAME" => "Vistaraverse E-Cart Private Limited", "SHOP_ADDRESS" => "#102, Sahiti Ramkuteer, Jai Hind Gandhi Road, VIP Hills, Silicon Valley, Madhapur, Hyderabad, Telangana 500081", "SHOP_SE_REG" => "SEA/RAN/ALO/BN/1425883/2026", "SHOP_CIN" => "U46901AP2026PTC126193",
+    "SHOP_GSTIN" => "36AAMCV3017H1Z9", "SHOP_PHONE" => "+91 99892 33328", "SHOP_WHATSAPP" => "919989233328", "SHOP_SUPPORT_EMAIL" => "info@pratyangi.com",
+    "SHOP_GRIEVANCE_NAME" => "Asha O\x27Brien, #5 & Co", "SHOP_GRIEVANCE_EMAIL" => "grievance@pratyangi.com", "SHOP_GRIEVANCE_PHONE" => "+91 90000 11111", "SHOP_HOURS" => "9:00 AM - 5:00 PM, Monday to Saturday"]);
 $app = Helpers::app($config, null, new Pratyangi\Http\DbRateLimitStore(static fn (): PDO => $pdo), null, new Pratyangi\Mail\LogMailer(' . var_export($tmp . '/mail.log', true) . ', new FixedClock((float) time())), static fn (): PDO => $pdo);
+if (preg_match("#^/__e/(\d+)$#", $path, $m)) { $r = Pratyangi\Web\ErrorPages::response((int) $m[1]); http_response_code($r->status()); header("Content-Type: " . $r->header("Content-Type")); echo $r->body(); return; }
 $headers = [];
 if (getenv("PF_CC_COOKIE") && ($path === "/account" || getenv("PF_CC_ALL") === "1")) { $headers["Cookie"] = "pf_session=" . getenv("PF_CC_COOKIE"); }
-$r = $app->handle(Helpers::request($_SERVER["REQUEST_METHOD"], $_SERVER["REQUEST_URI"], $headers));
+if (getenv("PF_CC_FWD") === "1") { foreach (["Origin" => "HTTP_ORIGIN", "Cookie" => "HTTP_COOKIE"] as $h => $k) { if (isset($_SERVER[$k])) { $headers[$h] = $_SERVER[$k]; } } }
+$body = getenv("PF_CC_FWD") === "1" && $_SERVER["REQUEST_METHOD"] === "POST" ? json_decode((string) file_get_contents("php://input"), true) : null;
+$r = $app->handle(Helpers::request($_SERVER["REQUEST_METHOD"], $_SERVER["REQUEST_URI"], $headers, is_array($body) ? $body : null));
+foreach ($r->cookies() as $line) { header("Set-Cookie: " . $line, false); }
 http_response_code($r->status());
 header("Content-Type: " . $r->header("Content-Type"));
 echo $r->body();

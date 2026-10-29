@@ -354,9 +354,9 @@ $t->test('an email sent along with a mobile sign-up is ignored: it never signs i
     $login = $post('/auth/login', ['email' => 'owner@example.com', 'password' => 'Saree2026']);
     $t->same($ownerId, $login->decoded()['user']['id']);
     $login = $post('/auth/login', ['email' => 'owner@example.com', 'password' => 'Wrong2026']);
-    $t->same([401, 'Incorrect password.'], [$login->status(), $login->decoded()['message']]);
+    $t->same([401, 'Email or password is incorrect'], [$login->status(), $login->decoded()['message']]);
     $login = $post('/auth/login', ['email' => 'never-typed@example.com', 'password' => 'Saree2026']);
-    $t->same([404, 'We could not find an account with this email.'], [$login->status(), $login->decoded()['message']]);
+    $t->same([401, 'Email or password is incorrect'], [$login->status(), $login->decoded()['message']]);
     $me = $post('/auth/email/resend', [], ['Cookie' => $cookieOf($r)]);
     $t->same(400, $me->status(), 'the mobile-only account has no email to confirm');
 });
@@ -486,7 +486,8 @@ $t->test('logs: no code and no full number in anything the app logged, including
     $all = implode("\n", $logged);
     preg_match_all('/otp=(\d{6})/', (string) file_get_contents($smsFile), $m);
     foreach (array_unique($m[1]) as $code) {
-        $t->ok(!str_contains($all, $code), 'a code appears in the app log');
+        // the code as a whole token (not inside a longer number, id or timestamp)
+        $t->ok(preg_match('/(?<![0-9A-Za-z-])' . $code . '(?![0-9A-Za-z-])/', $all) !== 1, 'a code appears in the app log');
     }
     $numbers = array_merge($pdo->query("SELECT mobile FROM shop_customers WHERE mobile IS NOT NULL")->fetchAll(PDO::FETCH_COLUMN), $pdo->query('SELECT DISTINCT target FROM shop_verification_codes WHERE channel = "mobile"')->fetchAll(PDO::FETCH_COLUMN));
     $t->ok(count($numbers) > 10, 'there are numbers to look for');

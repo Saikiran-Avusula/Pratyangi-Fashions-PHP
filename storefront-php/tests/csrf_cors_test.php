@@ -39,7 +39,7 @@ $t->test('unknown paths are the contract 404', function () use ($t, $app, $O): v
     foreach (['/nope', '/api/v1/nope', '/api/v1', '/api/v2/health'] as $path) {
         $r = $app->handle(Helpers::request('GET', $path));
         $t->same(404, $r->status(), $path);
-        $t->same('{"message":"That page does not exist."}', $r->body(), $path);
+        $t->same(str_starts_with($path, '/api') ? '{"message":"That page does not exist."}' : true, str_starts_with($path, '/api') ? $r->body() : str_contains($r->body(), 'Page not found'), $path);
     }
     $t->same(404, $app->handle(Helpers::request('POST', '/nope', ['Origin' => 'http://evil.example']))->status(), 'outside /api/v1 there is no CSRF check');
     $t->same(404, $app->handle(Helpers::request('PUT', '/api/v1/auth/me', ['Origin' => $O]))->status(), 'wrong method is 404, not 405');

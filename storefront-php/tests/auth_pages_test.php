@@ -54,8 +54,8 @@ $t->test('each page: 200, html, Node markup root, form ids, exactly two deferred
         }
         // the mobile code form (auth-otp.js) is on the sign-in and sign-up pages only
         $otp = in_array($key, ['login', 'signup'], true);
-        $t->same($otp ? 3 : 2, substr_count($b, '<script'), $path . ': script tags');
-        $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/auth.js"></script>' . ($otp ? '<script defer src="/assets/auth-otp.js"></script>' : ''), $b, $path);
+        $t->same(($otp ? 3 : 2) + ($key === 'signup' ? 1 : 0) + 1, substr_count($b, '<script'), $path . ': script tags');
+        $t->contains('<script defer src="/assets/site.js"></script>' . ($key === 'signup' ? '<script defer src="/assets/offers.js"></script>' : '') . '<script defer src="/assets/auth.js"></script>' . ($otp ? '<script defer src="/assets/auth-otp.js"></script>' : '') . '<script defer src="/assets/cookies.js"></script>', $b, $path);
         $t->same(0, preg_match('/<script(?![^>]*\ssrc=)/i', $b), $path . ': no inline script');
         $t->same(0, preg_match('/\son[a-z]+="/i', $b), $path . ': no inline event handlers');
         $t->same(0, preg_match('#(src|href)="(https?:)?//#', $b), $path . ': no external resources');
@@ -84,7 +84,7 @@ $t->test('login markup: classes, labels, links, password reveal, no Google', fun
 
 $t->test('signup markup', function () use ($t): void {
     $b = Helpers::app()->handle(Helpers::request('GET', '/signup'))->body();
-    foreach (['<h1 class="neurva_title">Create your account</h1>', 'Join Pratyangi Fashions for faster checkout, order tracking and AI try-on.',
+    foreach (['<h1 class="neurva_title">Create your account</h1>', 'Create an account to track orders and save addresses.',
         'data-pf-mode="otp">Mobile OTP</button>', 'data-pf-signup="1"', 'id="otp-terms"', 'id="auth-name"', 'Full name', 'placeholder="Gaurav Kumar"', 'Email address', 'Create a password',
         'Confirm password', 'Re-enter your password', 'class="neurva_strength" data-score="0"', 'Use at least 8 characters with a letter and a number.',
         'At least 8 characters', 'A letter', 'A number', 'class="neurva_check"', 'I agree to the <span class="neurva_strong">Terms &amp; Conditions</span> and <span class="neurva_strong">Privacy Policy</span>.',
@@ -171,7 +171,7 @@ $t->test('hostile query values are never printed', function () use ($t, $routes)
         $b = $r->body();
         $t->ok(!str_contains($b, 'alert(1)'), $path . ': value not reflected');
         $t->ok(!str_contains($b, '"><script'), $path);
-        $t->same(in_array($path, ['/login', '/signup'], true) ? 3 : 2, substr_count($b, '<script'), $path . ': still only the page scripts');
+        $t->same((in_array($path, ['/login', '/signup'], true) ? 4 : 3) + ($path === '/signup' ? 1 : 0), substr_count($b, '<script'), $path . ': still only the page scripts');
         $t->contains('data-pf-next="/"', $b, $path . ': a hostile next falls back to the landing page');
     }
     // a hostile token still shows the "checking" card (auth.js asks the API; the server never prints it)
@@ -224,7 +224,7 @@ $t->test('header: a hostile first name is escaped on every sign-in page', functi
         $t->contains('&lt;script&gt;&quot;x&quot;&amp;', $b, $method);
         $t->contains('<span class="pSCCwa_avatar" aria-hidden="true">&lt;</span>', $b, $method);
         $t->contains('title="e&quot;&lt;@x.com"', $b, $method);
-        $t->same(in_array($method, ['login', 'signup'], true) ? 3 : 2, substr_count($b, '<script'), $method . ': only the page scripts');
+        $t->same((in_array($method, ['login', 'signup'], true) ? 4 : 3) + ($method === 'signup' ? 1 : 0), substr_count($b, '<script'), $method . ': only the page scripts');
     }
 });
 
@@ -264,7 +264,7 @@ $t->test('/account and /account/orders: the coming page; Logout only when signed
     $b = $pages($signedIn)->accountSoon($get('/account', ['Cookie' => 'pf_session=tok']))->body();
     $t->contains('<button type="button" class="pnvDaq_logout" data-pf="logout">', $b);
     $t->contains('Logout</button>', $b);
-    $t->same(1, substr_count($b, '<script'));
+    $t->same(2, substr_count($b, '<script'));
     $t->contains('<script defer src="/assets/site.js"></script>', $b);
 });
 

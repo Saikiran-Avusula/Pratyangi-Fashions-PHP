@@ -45,7 +45,7 @@ $t->test('signed out: sign-in link in the Node style', function () use ($t, $con
 
 $t->test('a hostile name is escaped everywhere', function () use ($t, $controller): void {
     $b = $controller(static fn (string $token): ?array => ['name' => '<script>"x"&', 'email' => 'e"<@x.com'])->home('tok')->body();
-    $t->same(2, substr_count($b, '<script'), 'only the two page script tags (site.js, bag.js)');
+    $t->same(3, substr_count($b, '<script'), 'only the three page script tags (site.js, bag.js, cookies.js)');
     $t->contains('&lt;script&gt;&quot;x&quot;&amp;', $b);
     $t->contains('<span class="pSCCwa_avatar" aria-hidden="true">&lt;</span>', $b);
     $t->contains('title="e&quot;&lt;@x.com"', $b);

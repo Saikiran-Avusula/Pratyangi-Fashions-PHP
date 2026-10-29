@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Pratyangi\Payments;
 
+use Pratyangi\Auth\NumberVerification;
 use Pratyangi\Http\ApiException;
 use Pratyangi\Http\Context;
 use Pratyangi\Http\Request;
@@ -23,6 +24,10 @@ final class PaymentController
         private bool $smsEnabled,
         private ?string $mode,
         private \Closure $service,
+        private string $orderOtp = 'off',
+        /** @var \Closure(int,int):string|null customer id, address id -> that address's phone */
+        private ?\Closure $addressPhone = null,
+        private ?\Closure $numbers = null,
     ) {
     }
 
@@ -50,6 +55,10 @@ final class PaymentController
         }
         if (!$this->smsEnabled && (($customer['email'] ?? null) === null || ($customer['email_verified_at'] ?? null) === null)) {
             throw new ApiException(403, 'Please verify your email address before placing an order.', null, null, 'email-required');
+        }
+        // ORDER_OTP: online payment is not cash on delivery, so only 'always' and 'new_number' ask for a code here
+        if ($this->numbers !== null && $this->addressPhone !== null && NumberVerification::required($this->orderOtp, $this->smsEnabled, 'online')) {
+            ($this->numbers)()->assertForOrder($this->orderOtp, $this->smsEnabled, (int) $customer['id'], (string) ($this->addressPhone)((int) $customer['id'], $body['addressId']), 'online');
         }
         $result = ($this->service)()->start((int) $customer['id'], $key, $body['addressId'], $body['lines']);
         return Response::json(['order' => $result['order']->toDto(), 'razorpay' => $result['razorpay']], $result['replay'] ? 200 : 201);

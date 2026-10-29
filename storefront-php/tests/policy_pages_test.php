@@ -13,6 +13,7 @@ use Pratyangi\Views\ShopInfo;
 $t = new TestCase('policy_pages_test');
 $full = [
     'SHOP_LEGAL_NAME' => 'Sample Legal Name Pvt Ltd', 'SHOP_ADDRESS' => "1-2-3 Sample Street\nHyderabad 500001", 'SHOP_GSTIN' => '36ABCDE1234F1Z5',
+    'SHOP_CIN' => 'U46901AP2026PTC126193', 'SHOP_SE_REG' => 'SEA/RAN/ALO/BN/1425883/2026', 'SHOP_WHATSAPP' => '919989233328', 'SHOP_GRIEVANCE_EMAIL' => 'grievance@example.test',
     'SHOP_PHONE' => '+91 98765 43210', 'SHOP_SUPPORT_EMAIL' => 'help@example.test', 'SHOP_HOURS' => 'Mon-Sat 10:00-18:00',
     'SHOP_SOCIAL_INSTAGRAM' => 'https://instagram.example.test/shop', 'SHOP_SOCIAL_WHATSAPP' => 'https://wa.example.test/91',
 ];
@@ -24,9 +25,10 @@ $t->test('the five pages exist, say DRAFT, use the layout, header and footer, an
         $r = $get($path, $full);
         $t->same([200, 'text/html; charset=utf-8'], [$r->status(), $r->header('Content-Type')], $path);
         $b = $r->body();
-        foreach (['DRAFT - to be reviewed', '<header class="pSCCwa_header"', '<footer class="f_viWW_footer">', '<div class="pf_topbar">', 'Sample Legal Name Pvt Ltd'] as $needle) {
+        foreach (['<header class="pSCCwa_header"', '<footer class="f_viWW_footer">', '<div class="pf_topbar">', 'Sample Legal Name Pvt Ltd'] as $needle) {
             $t->contains($needle, $b, $path . ': ' . $needle);
         }
+        $t->same($path !== '/contact', str_contains($b, 'DRAFT - to be reviewed'), $path . ': DRAFT banner on the policy pages, not on /contact (real data)');
         $t->same(0, preg_match('/<script(?![^>]*\ssrc=)/i', $b), $path . ': no inline script');
         $t->same(1, preg_match('#<h1>(Privacy Policy|Terms &amp; Conditions|Refund Policy|Shipping Policy|Contact us)</h1>#', $b), $path . ': the heading is the page title');
     }
@@ -48,7 +50,7 @@ Hyderabad 500001",
             'href="/privacy"', 'href="/terms"', 'href="/refund-policy"', 'href="/shipping-policy"', 'href="/contact"', '© 2026 Sample Legal Name Pvt Ltd. All rights reserved.'] as $needle) {
             $t->contains($needle, $footer, $path . ': ' . $needle);
         }
-        $t->same(2, substr_count($footer, 'target="_blank"'), $path . ': only the two social links that are set');
+        $t->same(4, substr_count($footer, 'target="_blank"'), $path . ': the two social links that are set, the WhatsApp link and the floating WhatsApp button');
         $t->contains('href="https://instagram.example.test/shop"', $footer);
         $t->ok(!str_contains($footer, 'facebook.svg') && !str_contains($footer, 'youtube.svg'), $path . ': no icon for an unset network');
         $t->same(1, substr_count($b, 'class="pf_topbar"'), $path . ': one top bar');
@@ -171,16 +173,44 @@ $t->test('the emails: logo on top, brand colours, the code, and the legal name, 
     ShopInfo::init(Helpers::config($full + ['WEB_ORIGIN' => 'https://shop.example.test']), Helpers::tempDir('pf_brand_') . '/'); // an empty brand folder: the emblem
     foreach (['email_verify', 'reset'] as $purpose) {
         $m = MailTemplates::code($purpose, '482913', 10);
-        foreach (['<img src="https://shop.example.test/assets/images/reference/brand-emblem.webp"', '#800020', '482913', 'Sample Legal Name Pvt Ltd', "1-2-3 Sample Street<br>
-Hyderabad 500001", 'mailto:help@example.test', 'This code works for 10 minutes.'] as $needle) {
+        foreach (['<img src="https://shop.example.test/assets/images/reference/brand-emblem.webp"', '#800020', '482913', 'Sample Legal Name Pvt Ltd', 'CIN: U46901AP2026PTC126193', 'mailto:help@example.test', 'This code works for 10 minutes.'] as $needle) {
             $t->contains($needle, $m['html'], $purpose . ': ' . $needle);
         }
         $t->contains('Your code is 482913.', $m['text']);
-        $t->contains("--\nSample Legal Name Pvt Ltd\n1-2-3 Sample Street\nHyderabad 500001\nSupport: help@example.test", $m['text']);
+        $t->contains("--
+Pratyangi Fashions (a unit of Sample Legal Name Pvt Ltd)
+CIN: U46901AP2026PTC126193
+Support: help@example.test", $m['text']);
         $t->ok(!str_contains($m['text'], 'http'), 'no link in the text');
     }
     ShopInfo::init(Helpers::config(['SHOP_LEGAL_NAME' => '<b>x</b>', 'SHOP_ADDRESS' => '<i>y</i>']));
     $t->ok(!str_contains(MailTemplates::code('reset', '123456', 5)['html'], '<b>x</b>'), 'hostile company text is escaped in the HTML mail');
+});
+
+$t->test('CIN, WhatsApp and the Grievance Officer: footer, /contact and policy text; hidden when empty; escaped once; checked at start-up', function () use ($t, $get, $full): void {
+    $tricky = "Asha O'Brien, #5 & Co";
+    $b = $get('/contact', ['SHOP_GRIEVANCE_NAME' => $tricky, 'SHOP_GRIEVANCE_PHONE' => '+91 90000 11111'] + $full)->body();
+    foreach (['<dt>CIN</dt><dd>U46901AP2026PTC126193</dd>', 'href="https://wa.me/919989233328"', 'Chat on WhatsApp', '<h2>Grievance Officer</h2>', 'Asha O&#039;Brien, #5 &amp; Co',
+        'href="mailto:grievance@example.test"', '+91 90000 11111', 'We acknowledge complaints within 48 hours and resolve them within 30 days.', '<dt>Shops &amp; Establishments Reg. No.</dt><dd>SEA/RAN/ALO/BN/1425883/2026</dd>',
+        'Pratyangi Fashions (a unit of Sample Legal Name Pvt Ltd)', 'CIN: U46901AP2026PTC126193'] as $needle) {
+        $t->contains($needle, $b, $needle);
+    }
+    $t->ok(!str_contains($b, "O'Brien") && !str_contains($b, '&amp;amp;'), 'escaped once');
+    $t->ok(!stripos($b, 'registered office'), 'no registered office anywhere');
+    $terms = $get('/terms', $full)->body();
+    $t->contains('Pratyangi Fashions (a unit of Sample Legal Name Pvt Ltd) is the seller of every order.', $terms);
+    // empty = hidden (the grievance name and phone are optional on their own)
+    $plain = $get('/contact', ['SHOP_GRIEVANCE_EMAIL' => ''] + $full)->body();
+    $t->ok(!str_contains($plain, 'Grievance Officer'), 'no email, no Grievance block');
+    $bare = $get('/contact', [])->body();
+    foreach (['wa.me', 'CIN', 'Grievance Officer', 'a unit of', 'Establishments'] as $gone) {
+        $t->ok(!str_contains($bare, $gone), 'hidden when empty: ' . $gone);
+    }
+    $some = $get('/contact', ['SHOP_GRIEVANCE_EMAIL' => 'g@example.test'] + $full)->body();
+    $t->ok(!str_contains(substr($some, (int) strpos($some, 'Grievance Officer')), '<dt>Name</dt><dd></dd>'), 'no empty name row');
+    foreach ([['SHOP_CIN' => 'bad'], ['SHOP_WHATSAPP' => '+91 99892 33328'], ['SHOP_GRIEVANCE_EMAIL' => 'nope'], ['SHOP_GRIEVANCE_NAME' => str_repeat('a', 81)], ['SERVER_CHECK_KEY' => 'short']] as $bad) {
+        $t->throws(ConfigException::class, static fn () => Helpers::config($bad), key($bad));
+    }
 });
 
 exit($t->finish());

@@ -7,6 +7,10 @@ use Pratyangi\Address\AddressController;
 use Pratyangi\Address\AddressRepo;
 use Pratyangi\Auth\AccountService;
 use Pratyangi\Auth\AuthController;
+use Pratyangi\Auth\ConsentController;
+use Pratyangi\Auth\ConsentRepo;
+use Pratyangi\Auth\NumberController;
+use Pratyangi\Auth\NumberVerification;
 use Pratyangi\Auth\GoogleVerifier;
 use Pratyangi\Auth\AuthService;
 use Pratyangi\Auth\CustomerRepo;
@@ -32,6 +36,7 @@ use Pratyangi\Http\RateLimitStore;
 use Pratyangi\Http\Request;
 use Pratyangi\Http\Response;
 use Pratyangi\Http\Router;
+use Pratyangi\Mail\EventMail;
 use Pratyangi\Mail\LogMailer;
 use Pratyangi\Mail\Mailer;
 use Pratyangi\Mail\NullMailer;
@@ -51,6 +56,7 @@ use Pratyangi\Web\AuthPages;
 use Pratyangi\Web\CatalogLinks;
 use Pratyangi\Web\CatalogPages;
 use Pratyangi\Views\ShopInfo;
+use Pratyangi\Web\ErrorPages;
 use Pratyangi\Web\LandingController;
 use Pratyangi\Web\PolicyPages;
 use Pratyangi\Web\ShopPages;
@@ -97,6 +103,7 @@ final class App
     private ?AddressRepo $addressRepo = null;
     private ?AddressController $addressController = null;
     private ?PaymentService $paymentService = null;
+    private ?EventMail $eventMail = null;
     private string $csp;
     private PaymentController $payments;
 
@@ -140,7 +147,9 @@ final class App
         }
         ShopInfo::init($config); // the company details of the footer, the policy pages and the emails
         $this->policyPages = new PolicyPages(fn (string $token): ?array => $this->auth()->customerForToken($token), $logger);
-        $this->payments = new PaymentController($config->paymentsEnabled, $config->checkoutEnabled, $config->smsEnabled, $config->razorpayMode(), fn (): PaymentService => $this->paymentService());
+        $this->payments = new PaymentController($config->paymentsEnabled, $config->checkoutEnabled, $config->smsEnabled, $config->razorpayMode(), fn (): PaymentService => $this->paymentService(), $config->orderOtp,
+            fn (int $customerId, int $addressId): string => $this->addressRepo()->findById($customerId, $addressId)?->phone ?? '',
+            fn (): NumberVerification => new NumberVerification($this->pdo(), $this->mobileOtpService(), $this->clock));
         $this->staticFiles = new StaticFiles(dirname(__DIR__) . '/public/assets');
         $this->router = new Router();
         $this->routes();
@@ -204,6 +213,12 @@ final class App
             $this->logger->channel('error')->exception('unhandled error: ' . $e->getMessage(), $e);
             $response = Response::json(['message' => ApiException::GENERIC_500], 500);
         }
+        // browser pages get the branded HTML for a JSON error; /api/* keeps its JSON
+        if (preg_match('#^/api(/|$)#', $request->path) !== 1 && str_starts_with((string) $response->header('Content-Type'), 'application/json') && in_array($response->status(), ErrorPages::statuses(), true)) {
+            $response = ErrorPages::response($response->status());
+        } elseif ($response->status() >= 400 && str_starts_with((string) $response->header('Content-Type'), 'text/html')) {
+            $response->setHeader('X-Robots-Tag', 'noindex'); // page-level 404/503 (unknown product, products being updated)
+        }
         foreach ($context->headers as $name => $value) {
             $response->setHeader($name, $value);
         }
@@ -220,6 +235,9 @@ final class App
             $response->setHeader('Content-Security-Policy', str_replace(';upgrade-insecure-requests', '', $this->csp));
         }
         $response->setHeader('X-Request-Id', $requestId);
+        if ($this->config->staging) {
+            $response->setHeader('X-Robots-Tag', 'noindex, nofollow');
+        }
         // money and payment state are never cached, errors included
         if (str_starts_with((string) Router::apiPath($request->path), '/payments')) {
             $response->setHeader('Cache-Control', 'no-store');
@@ -252,6 +270,9 @@ final class App
         // like express.json: a bad or oversized body is refused before routing and before the CSRF check
         $request->jsonBody();
 
+        if ($this->config->maintenance && !in_array($context->clientIp(), $this->config->maintenanceAllowIp, true) && !str_starts_with($request->path, '/assets/') && Router::normalise($request->path) !== '/health') {
+            throw ApiException::unavailable("We'll be right back. The shop is being updated.");
+        }
         if (($request->method === 'GET' || $request->method === 'HEAD') && Router::normalise($request->path) === '/health') {
             return Response::json(['ok' => true]);
         }
@@ -309,6 +330,10 @@ final class App
         if ($path === '/') {
             return $this->landing->home($request->cookie(AuthController::COOKIE));
         }
+        if ($path === '/server-check') {
+            // tools/server_check.php (shipped with the app) answers it; it refuses unless SERVER_CHECK_KEY is set and matches
+            return (require dirname(__DIR__) . '/tools/server_check.php')($this->config, $request, fn (): \PDO => ($this->pdoFactory)());
+        }
         if ($path === '/soon') {
             return $this->landing->soon();
         }
@@ -361,6 +386,8 @@ final class App
     {
         $auth = fn (): AuthController => $this->authController();
         $address = fn (): AddressController => $this->addressController();
+        $consent = fn (): ConsentController => new ConsentController(new ConsentRepo($this->pdo()));
+        $numbers = fn (): NumberController => new NumberController(new NumberVerification($this->pdo(), $this->mobileOtpService(), $this->clock));
         $r = $this->router;
         // mobile codes are off until SMS_ENABLED=true (the SMS template is approved): the same 503 on every mobile route
         $sms = fn (\Closure $handler): \Closure => function (Request $q, Context $c) use ($handler): Response {
@@ -400,6 +427,12 @@ final class App
         $r->add('DELETE', '/addresses/:id', fn (Request $q, Context $c, string $id): Response => $address()->delete($q, $c, $id), null, true);
         $r->add('POST', '/addresses/:id/default', fn (Request $q, Context $c, string $id): Response => $address()->setDefault($q, $c, $id), null, true);
 
+        // PHP-only: marketing consent per channel, and a code to a delivery number (docs/API_CONTRACT.md 11.7)
+        $r->add('GET', '/consent', fn (Request $q, Context $c): Response => $consent()->show($q, $c), null, true);
+        $r->add('PUT', '/consent', fn (Request $q, Context $c): Response => $consent()->update($q, $c), null, true);
+        $r->add('POST', '/numbers/otp/request', $sms(fn (Request $q, Context $c): Response => $numbers()->request($q, $c)), 'otp_ip', true);
+        $r->add('POST', '/numbers/otp/verify', $sms(fn (Request $q, Context $c): Response => $numbers()->verify($q, $c)), 'otp_verify', true);
+
         // Online payment with Razorpay (section 2.6). There is no cash-on-delivery route: COD is off for launch.
         $r->add('GET', '/payments/config', fn (Request $q, Context $c): Response => $this->payments->config($q, $c));
         $r->add('POST', '/payments/razorpay/order', fn (Request $q, Context $c): Response => $this->payments->start($q, $c), 'payment_order', true);
@@ -421,7 +454,14 @@ final class App
             $this->config->sessionDays,
             $this->clock,
             $this->logger,
+            $this->eventMail(),
         );
+    }
+
+    /** The account and order emails, each sent once per event (claims live in shop_mail_events). */
+    private function eventMail(): EventMail
+    {
+        return $this->eventMail ??= new EventMail($this->mailer, EventMail::claimInDb($this->pdo()), EventMail::releaseInDb($this->pdo()), $this->config->checkoutEnabled || $this->config->paymentsEnabled, $this->clock, $this->logger);
     }
 
     private function authController(): AuthController
@@ -460,6 +500,7 @@ final class App
             $this->clock,
             $this->logger,
             $this->config->smsEnabled,
+            $this->eventMail(),
         );
     }
 
@@ -498,7 +539,20 @@ final class App
             (string) $this->config->razorpayKeySecret(),
             $this->clock,
             $this->logger,
+            null,
+            fn (StoredOrder $o) => $this->confirmationMail($o),
         );
+    }
+
+    private function confirmationMail(StoredOrder $o): void
+    {
+        $customer = (new CustomerRepo($this->pdo()))->findById($o->customerId);
+        $email = (string) ($customer['email'] ?? '');
+        $this->eventMail()->order('orderConfirmed', $email, [
+            'orderNo' => $o->orderNo, 'name' => $o->shipTo['name'] !== '' ? $o->shipTo['name'] : (string) ($customer['name'] ?? ''),
+            'items' => array_map(static fn (array $i): array => [$i['name'], $i['quantity'], $i['unitPricePaise']], $o->items),
+            'itemsTotalPaise' => $o->itemsTotalPaise, 'taxPaise' => $o->taxPaise, 'totalPaise' => $o->totalPaise, 'address' => $o->shipTo['name'] . ', ' . $o->addressText(),
+        ]);
     }
 
     private function addressController(): AddressController

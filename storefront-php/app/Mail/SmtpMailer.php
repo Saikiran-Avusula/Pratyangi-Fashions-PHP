@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Pratyangi\Mail;
 
+use Pratyangi\Views\ShopInfo;
+
 /**
  * SMTP through PHPMailer. The library is NOT part of this project's code: its files live in app/Lib/src/
  * (PHPMailer.php, SMTP.php, Exception.php). Without them send() fails with a clear message and the routes degrade
@@ -66,6 +68,11 @@ final class SmtpMailer implements Mailer
             $mail->addAddress($to);
             $mail->Subject = $subject;
             if ($html !== null) {
+                // the pictures travel inside the message (cid:), so they show even from localhost or behind a password
+                [$html, $images] = self::inlineImages($html, ShopInfo::siteUrl(), dirname(__DIR__, 2) . '/public');
+                foreach ($images as $cid => $file) {
+                    $mail->addEmbeddedImage($file, $cid, basename($file));
+                }
                 $mail->isHTML(true);
                 $mail->Body = $html;
                 $mail->AltBody = $text;
@@ -78,6 +85,28 @@ final class SmtpMailer implements Mailer
             // never include the library's text: it can echo server replies
             throw new MailException('The SMTP server did not accept the message (' . get_class($e) . ').');
         }
+    }
+
+    /**
+     * Swaps each <img src="SITE/assets/images/..."> for a cid: address when that file exists under public/ (a path that climbs out is ignored).
+     * @return array{0:string,1:array<string,string>} the new html and cid => file
+     */
+    public static function inlineImages(string $html, string $siteUrl, string $publicDir): array
+    {
+        $files = [];
+        if ($siteUrl === '') {
+            return [$html, $files];
+        }
+        $html = preg_replace_callback('~(<img\b[^>]*?\ssrc=")' . preg_quote($siteUrl, '~') . '(/assets/images/[A-Za-z0-9_./-]+)(")~', static function (array $m) use (&$files, $publicDir): string {
+            $file = $publicDir . $m[2];
+            if (str_contains($m[2], '..') || !is_file($file)) {
+                return $m[0];
+            }
+            $cid = 'img' . substr(md5($m[2]), 0, 12) . '@pratyangi';
+            $files[$cid] = $file;
+            return $m[1] . 'cid:' . $cid . $m[3];
+        }, $html) ?? $html;
+        return [$html, $files];
     }
 
     /** "Name <address>" or a bare address. @return array{0:string,1:string} */

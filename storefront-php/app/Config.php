@@ -42,6 +42,21 @@ final class Config
     public readonly string $shopPhone;
     public readonly string $shopSupportEmail;
     public readonly string $shopHours;
+    /** Company identity number (SHOP_CIN), WhatsApp number as digits with the country code (SHOP_WHATSAPP), and the Grievance Officer (SHOP_GRIEVANCE_*); empty = not shown. */
+    public readonly string $shopCin;
+    /** Shops & Establishments registration number (SHOP_SE_REG), shown on /contact only; empty = hidden. */
+    public readonly string $shopSeReg;
+    public readonly string $shopWhatsapp;
+    public readonly string $shopGrievanceName;
+    public readonly string $shopGrievanceEmail;
+    public readonly string $shopGrievancePhone;
+    /** STAGING=true: every answer carries X-Robots-Tag: noindex. SERVER_CHECK_KEY: the secret of /server-check (empty = that page refuses). */
+    public readonly bool $staging;
+    private readonly string $serverCheckKey;
+    /** MAINTENANCE=true: every page answers 503 "We'll be right back", except for the addresses in MAINTENANCE_ALLOW_IP (comma-separated). */
+    public readonly bool $maintenance;
+    /** @var list<string> */
+    public readonly array $maintenanceAllowIp;
     /** Orders above this many rupees ship free (SHOP_FREE_SHIPPING_ABOVE); null = the shop says nothing about it. */
     public readonly ?int $shopFreeShippingAbove;
     /** @var array<string,string> facebook, youtube, instagram, whatsapp => https address */
@@ -66,6 +81,7 @@ final class Config
     // online orders and Razorpay (stage B1). Both switches default to off.
     /** SMS_ENABLED: while false (until the SMS template is approved) everything runs on email only. */
     public readonly bool $smsEnabled;
+    public readonly string $orderOtp;
     public readonly bool $checkoutEnabled;
     public readonly bool $paymentsEnabled;
     public readonly ?string $razorpayKeyId;
@@ -195,6 +211,42 @@ final class Config
         if ($this->shopSupportEmail !== '' && filter_var($this->shopSupportEmail, FILTER_VALIDATE_EMAIL) === false) {
             $problems[] = 'SHOP_SUPPORT_EMAIL: must be an email address';
         }
+        $this->shopCin = strtoupper((string) ($v['SHOP_CIN'] ?? ''));
+        $this->shopSeReg = $plain((string) ($v['SHOP_SE_REG'] ?? ''));
+        if (strlen($this->shopSeReg) > 60) {
+            $problems[] = 'SHOP_SE_REG: at most 60 characters';
+        }
+        $this->shopWhatsapp = (string) ($v['SHOP_WHATSAPP'] ?? '');
+        $this->shopGrievanceName = $plain((string) ($v['SHOP_GRIEVANCE_NAME'] ?? ''));
+        $this->shopGrievanceEmail = (string) ($v['SHOP_GRIEVANCE_EMAIL'] ?? '');
+        $this->shopGrievancePhone = $plain((string) ($v['SHOP_GRIEVANCE_PHONE'] ?? ''));
+        if ($this->shopCin !== '' && preg_match('/^[LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}$/D', $this->shopCin) !== 1) {
+            $problems[] = 'SHOP_CIN: must be 21 characters, for example U12345TG2020PTC123456';
+        }
+        if ($this->shopWhatsapp !== '' && preg_match('/^[1-9]\d{7,14}$/D', $this->shopWhatsapp) !== 1) {
+            $problems[] = 'SHOP_WHATSAPP: digits only with the country code, for example 919876543210';
+        }
+        if ($this->shopGrievanceEmail !== '' && filter_var($this->shopGrievanceEmail, FILTER_VALIDATE_EMAIL) === false) {
+            $problems[] = 'SHOP_GRIEVANCE_EMAIL: must be an email address';
+        }
+        foreach (['SHOP_GRIEVANCE_NAME' => 80, 'SHOP_GRIEVANCE_PHONE' => 40] as $name => $max) {
+            if (mb_strlen((string) ($v[$name] ?? '')) > $max) {
+                $problems[] = $name . ': at most ' . $max . ' characters';
+            }
+        }
+        $this->staging = self::bool($v, 'STAGING', $problems);
+        $this->maintenance = self::bool($v, 'MAINTENANCE', $problems);
+        $this->maintenanceAllowIp = array_values(array_filter(array_map('trim', explode(',', (string) ($v['MAINTENANCE_ALLOW_IP'] ?? '')))));
+        foreach ($this->maintenanceAllowIp as $ip) {
+            if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+                $problems[] = 'MAINTENANCE_ALLOW_IP: a comma-separated list of IP addresses';
+                break;
+            }
+        }
+        $this->serverCheckKey = (string) ($v['SERVER_CHECK_KEY'] ?? '');
+        if ($this->serverCheckKey !== '' && strlen($this->serverCheckKey) < 16) {
+            $problems[] = 'SERVER_CHECK_KEY: at least 16 characters, or empty';
+        }
         $freeAbove = (string) ($v['SHOP_FREE_SHIPPING_ABOVE'] ?? '');
         if ($freeAbove !== '' && (preg_match('/^[1-9]\d{0,7}$/D', $freeAbove) !== 1)) {
             $problems[] = 'SHOP_FREE_SHIPPING_ABOVE: must be a whole number of rupees (1 to 99999999), or empty';
@@ -296,6 +348,13 @@ final class Config
 
         // Razorpay: test keys only outside production. A live key needs APP_ENV=production AND RAZORPAY_ALLOW_LIVE=true.
         $this->smsEnabled = self::bool($v, 'SMS_ENABLED', $problems);
+        // when an order needs a code sent to its delivery number (only while SMS_ENABLED=true): cod = every cash-on-delivery order, always = every order, new_number = a number not verified yet, off = never
+        $orderOtp = strtolower(trim((string) ($v['ORDER_OTP'] ?? 'cod')));
+        if (!in_array($orderOtp, ['cod', 'always', 'new_number', 'off'], true)) {
+            $problems[] = 'ORDER_OTP: must be cod, always, new_number or off';
+            $orderOtp = 'cod';
+        }
+        $this->orderOtp = $orderOtp;
         $this->checkoutEnabled = self::bool($v, 'CHECKOUT_ENABLED', $problems);
         $this->paymentsEnabled = self::bool($v, 'PAYMENTS_ENABLED', $problems);
         if ($this->paymentsEnabled && $erpMode === 'http' && $orderKey === null && !self::hasProblem($problems, 'ERP_ORDER_KEY')) {
@@ -497,6 +556,12 @@ final class Config
     }
 
     /** @param array<string,string> $v @param list<string> $problems */
+    /** True when SERVER_CHECK_KEY is set and $given is that key (compared in constant time). */
+    public function serverCheckKeyMatches(string $given): bool
+    {
+        return $this->serverCheckKey !== '' && hash_equals($this->serverCheckKey, $given);
+    }
+
     private static function bool(array $v, string $name, array &$problems): bool
     {
         if (!isset($v[$name])) {

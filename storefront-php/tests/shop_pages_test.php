@@ -62,7 +62,7 @@ $t->test('/bag signed out: empty-bag frame in the Node markup, sign-in checkout 
     $b = $r->body();
     foreach (['<title>Your Bag | Pratyangi Fashions</title>', '<main class="BpPmcW_page" data-pf-bag-page="bag" data-pf-image-base="" data-checkout-href="/login?next=/checkout">',
         '<section class="BpPmcW_bag" aria-labelledby="bag-title">', '<h1 id="bag-title">Your Bag <span data-pf="title-count">(0 items)</span></h1>',
-        '<a class="BpPmcW_continue" href="/new-arrivals">', 'Your bag is empty — discover something beautiful.', '<div class="BpPmcW_items" data-pf="bag-items"></div>',
+        '<a class="BpPmcW_continue" href="/new-arrivals">', 'data-pf="bag-lead"></p>', '<div class="BpPmcW_items" data-pf="bag-items"></div>',
         '<h2>Order Summary</h2>', '<dd data-pf="subtotal">Rs. 0.00</dd>', '<dd>Confirmed by the shop</dd>', '<strong data-pf="total">Rs. 0.00</strong>',
         'Delivery charges are not included.', 'class="BpPmcW_checkout" data-pf="checkout-slot" disabled=""', 'Online payment is not available yet', 'Coupons are not available yet.',
         '<h2 id="recommended-title">You May Also Like</h2>', 'Complete your look with these beautiful sarees', '<section class="OL4btW_section"', 'class="f_viWW_footer"', 'class="pSCCwa_header"',
@@ -70,7 +70,7 @@ $t->test('/bag signed out: empty-bag frame in the Node markup, sign-in checkout 
         $t->contains($needle, $b, $needle);
     }
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/bag-page.js"></script>', $b);
-    $noInline($t, $b, 3, '/bag');
+    $noInline($t, $b, 4, '/bag');
     $t->same(4, substr_count($b, '<article class="JEjkwq_card"'), 'four recommended cards');
     $t->contains('<div class="BpPmcW_recommendedGrid">', $b);
     $t->contains('/assets/css/3wh3hbs4o_ca8.css', $b);
@@ -94,7 +94,7 @@ $t->test('/bag: a hostile product name in "You May Also Like" is escaped, only i
     $t->contains('&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt; &#039;q&#039; &amp; &quot;d&quot;', $b);
     $t->ok(!str_contains($b, 'Sold Out Saree'), 'a sold-out product is not recommended');
     $t->same(4, substr_count($b, '<article class="JEjkwq_card"'));
-    $noInline($t, $b, 3, 'hostile bag');
+    $noInline($t, $b, 4, 'hostile bag');
 });
 
 $t->test('/bag with the catalogue unreadable: still 200 with the friendly retry box and no reason shown, never cached', function () use ($t, $get): void {
@@ -102,9 +102,9 @@ $t->test('/bag with the catalogue unreadable: still 200 with the friendly retry 
     $r = $app->handle($get('/bag'));
     $t->same(200, $r->status());
     $b = $r->body();
-    $t->contains('We could not load products right now. Please try again in a moment.', $b);
+    $t->contains('Products are being updated. Please try again in a moment.', $b);
     $t->contains('data-pf="retry"', $b);
-    $t->contains('Your bag is empty — discover something beautiful.', $b);
+    $t->contains('data-pf="bag-lead"></p>', $b);
     $t->same('no-store', $r->header('Cache-Control'));
 });
 
@@ -112,7 +112,7 @@ $t->test('/checkout signed out: 302 to /login?next=/checkout, no body, nothing c
     foreach ([[], $cookie] as $headers) {
         $r = $pages(null)->checkout($get('/checkout', $headers));
         $t->same(302, $r->status());
-        $t->same('/login?next=/checkout', $r->header('Location'));
+        $t->same($headers === [] ? '/login?next=/checkout' : '/login?next=/checkout&expired=1', $r->header('Location'));
         $t->same('', $r->body());
         $t->same('no-store', $r->header('Cache-Control'));
     }
@@ -137,8 +137,8 @@ $t->test('/checkout signed in: steps, summary frame, delivery step enabled with 
     }
     $t->same(1, preg_match('/<button type="button" class="FVHMJa_pay" disabled="">.*Proceed to Pay/s', $b), 'the pay button is disabled');
     $t->ok(!str_contains($b, 'Place Order (Cash on Delivery)'), 'no working Place order button');
-    $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/address-book.js"></script><script defer src="/assets/bag-page.js"></script>', $b);
-    $noInline($t, $b, 4, '/checkout');
+    $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/offers.js"></script><script defer src="/assets/address-book.js"></script><script defer src="/assets/bag-page.js"></script>', $b);
+    $noInline($t, $b, 6, '/checkout');
     $t->same('private, no-store', $r->header('Cache-Control'));
     // no order API exists yet
     $t->same(404, Helpers::app()->handle(Helpers::request('POST', '/api/v1/checkout', ['Origin' => Helpers::ORIGIN], []))->status());
@@ -188,20 +188,26 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
     $t->contains('href="/account/addresses"', $b, 'Addresses row has its own page');
     $t->ok(!str_contains($b, 'Please confirm your email address'), 'verified: no notice');
     $t->same(1, preg_match('#<div class="P71-SG_profileMeta"><span>Member since Oct 2026</span><span>asha@example.com</span></div>#', $b), 'no mobile line');
-    $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/address-book.js"></script><script defer src="/assets/account.js"></script>', $b);
-    $noInline($t, $b, 3, '/account');
+    $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/offers.js"></script><script defer src="/assets/address-book.js"></script><script defer src="/assets/account.js"></script><script defer src="/assets/cookies.js"></script>', $b);
+    $noInline($t, $b, 5, '/account');
     $t->same('private, no-store', $r->header('Cache-Control'));
 });
 
 $t->test('/account: mobile shown when stored, verify notice when the email is not verified, hostile values escaped', function () use ($t, $pages, $get, $cookie, $evil, $noInline): void {
     $row = ['name' => $evil, 'email' => 'e"<@x.com', 'mobile' => '<b>98765</b>', 'created_at' => 'garbage', 'email_verified_at' => null];
-    $b = $pages($row)->account($get('/account', $cookie))->body();
+    $quiet = $pages($row)->account($get('/account', $cookie))->body();
+    $t->ok(!str_contains($quiet, 'Verify your email') && !str_contains($quiet, 'data-pf="email-send"'), 'no banner on an ordinary visit');
+    $t->contains('<a class="pf_verifyHint" href="/account?verify=1">Verify email</a>', $quiet, 'one quiet line instead');
+    $b = $pages($row)->account($get('/account?verify=1', $cookie))->body();
     $t->ok(!str_contains($b, '<script>alert(1)') && !str_contains($b, '<b>98765'), 'nothing raw');
     $t->contains('<span>&lt;b&gt;98765&lt;/b&gt;</span>', $b);
-    $t->contains('Confirm e&quot;&lt;@x.com with a 6-digit code.', $b);
+    $t->contains('Confirm e&quot;&lt;@x.com with a 6-digit code.', $b, 'the banner when asked for (?verify=1)');
     $t->contains('data-pf="email-send">Send code</button>', $b);
+    $t->ok(!str_contains($b, 'pf_verifyHint'), 'and then no extra link');
+    $verified = $pages(array_merge($row, ['email_verified_at' => '2026-10-03 08:05:00']))->account($get('/account?verify=1', $cookie))->body();
+    $t->ok(!str_contains($verified, 'Verify your email'), 'a verified email never gets the banner');
     $t->ok(!str_contains($b, 'Member since'), 'an unreadable date shows no "Member since"');
-    $noInline($t, $b, 3, 'hostile account');
+    $noInline($t, $b, 5, 'hostile account');
 });
 
 $t->test('/account "Complete your account": hidden while SMS_ENABLED=false and name + email are set; shown when SMS is on (mobile missing) or a detail is missing', function () use ($t, $pages, $get, $cookie, $asha): void {
@@ -213,7 +219,7 @@ $t->test('/account "Complete your account": hidden while SMS_ENABLED=false and n
     $t->contains('data-pf="link-open">Add mobile number</button>', $on);
     $noName = $pages(['email' => 'x@example.com', 'name' => '', 'created_at' => '2026-10-03 08:00:00', 'email_verified_at' => '2026-10-03 08:05:00'], null, false)->account($get('/account', $cookie))->body();
     $t->contains('Complete your account', $noName, 'a missing name still shows it with SMS off');
-    $t->contains('Add mobile number &mdash; Coming soon', $noName);
+    $t->ok(!str_contains($noName, 'Coming soon') && !str_contains($noName, 'Add mobile number'), 'no "Coming soon" button: the mobile number is asked for in the address form while SMS is off');
 });
 
 $t->test('through the App: /bag is 200, /checkout and /account redirect when signed out or when the session lookup fails, /account/orders redirects when signed out', function () use ($t, $get, $cookie): void {
@@ -243,10 +249,17 @@ $t->test('account sections: each has its own page, the same sidebar, and only th
     $t->contains('id="addresses"', $page('addresses'));
     $t->ok(!str_contains($page('addresses'), 'Recent Orders'), 'addresses has no overview panels');
     $t->contains('Common questions', $page('help'));
-    $t->contains('Order emails are on', $page('notifications'));
+    $n = $page('notifications');
+    $t->contains('Offers and new arrivals', $n);
+    foreach (['sms', 'whatsapp', 'email'] as $channel) {
+        $t->contains('<input type="checkbox" disabled data-pf-consent="' . $channel . '"/>', $n, $channel . ': a box that is never ticked by the server (the page loads the saved choice)');
+    }
     foreach (['payments' => 'Payment Methods', 'reviews' => 'My Reviews'] as $s => $title) {
         $t->contains('<h2>' . $title . '</h2>', $page($s));
-        $t->contains('Coming soon', $page($s));
+    }
+    foreach (['overview', 'orders', 'addresses', 'notifications', 'payments', 'reviews', 'help'] as $s) {
+        $t->ok(stripos($page($s), 'coming soon') === false && stripos($page($s), 'will come later') === false, $s . ': no "coming soon" text');
+        $t->ok(!str_contains($page($s), 'pf_emptyState"'), $s . ': no tall empty box (compact in every panel)');
     }
     $t->contains('aria-current="page" href="/account/help"', $page('help'));
     $t->same([302, '/login?next=/account/help'], (static fn ($r): array => [$r->status(), $r->header('Location')])($pages(null)->account($get('/account/help'), 'help')));

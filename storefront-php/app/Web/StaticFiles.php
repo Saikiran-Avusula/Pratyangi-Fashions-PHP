@@ -23,7 +23,7 @@ final class StaticFiles
     ];
 
     /** The only JavaScript files that are served (site.js: every page; auth.js: the sign-in pages; bag.js: the bag in the browser; listing.js: New Arrivals; product.js: the product page; bag-page.js: the bag and checkout pages; account.js: the account page; auth-otp.js: the mobile code form on the sign-in and sign-up pages). */
-    private const SCRIPTS = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js'];
+    private const SCRIPTS = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'];
 
     public function __construct(private string $root)
     {

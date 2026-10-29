@@ -223,4 +223,28 @@
       });
     });
   });
+  /* ------------------------------------------------------------------ Notifications: offers and new arrivals, per channel (offers.js) */
+
+  (function () {
+    var panel = qs('[data-pf="consent-panel"]');
+    if (!panel || !win.PratyangiOffers) return;
+    var boxes = qsa('[data-pf-consent]', panel);
+    var result = qs('[data-pf="consent-result"]', panel);
+    win.PratyangiOffers.get().then(function (state) {
+      if (!state) { say(result, GENERIC, true); return; }
+      boxes.forEach(function (box) { box.checked = !!state[box.getAttribute('data-pf-consent')]; box.disabled = false; });
+    });
+    boxes.forEach(function (box) {
+      box.addEventListener('change', function () {
+        var change = {};
+        change[box.getAttribute('data-pf-consent')] = box.checked;
+        box.disabled = true;
+        win.PratyangiOffers.set(change, 'account').then(function (state) {
+          box.disabled = false;
+          if (!state) { box.checked = !box.checked; say(result, GENERIC, true); return; }
+          say(result, 'Saved.', false);
+        });
+      });
+    });
+  })();
 })(window);

@@ -56,7 +56,7 @@ final class CatalogPages
         if ($products === null || $products === []) {
             $note = $products === null ? CatalogHtml::note(CatalogHtml::UNAVAILABLE, true, true) : CatalogHtml::note(CatalogHtml::EMPTY);
             $body = View::render('catalog/listing_message', ['account' => $account, 'note' => $note]);
-            return $this->page($request, 'New Arrivals | Pratyangi Fashions', self::LISTING_DESCRIPTION, $body, ['1_e1s2q5g68a2.css', '3wh3hbs4o_ca8.css'], ['site.js'], 200, $products === null);
+            return $this->page($request, 'New Arrivals | Pratyangi Fashions', self::LISTING_DESCRIPTION, $body, ['1_e1s2q5g68a2.css', '3wh3hbs4o_ca8.css'], ['site.js'], $products === null ? 503 : 200, $products === null);
         }
 
         $prices = array_map(static fn (array $p): float => (float) $p['price'], $products);
@@ -163,7 +163,7 @@ final class CatalogPages
             $unavailable = $products === null;
             $note = $unavailable ? CatalogHtml::note(CatalogHtml::UNAVAILABLE, true, true) : CatalogHtml::note(CatalogHtml::NOT_FOUND);
             $body = View::render('catalog/product_frame', ['account' => $account, 'inner' => $note]);
-            return $this->page($request, self::PRODUCT_TITLE, self::PRODUCT_DESCRIPTION, $body, self::STYLES, ['site.js'], $unavailable ? 200 : 404, $unavailable);
+            return $this->page($request, self::PRODUCT_TITLE, self::PRODUCT_DESCRIPTION, $body, self::STYLES, ['site.js'], $unavailable ? 503 : 404, $unavailable);
         }
 
         $inner = View::render('catalog/product', ['p' => $found, 'options' => self::otherOptions($products ?? [], $found)]);

@@ -27,11 +27,10 @@ final class AuthHtml
         'heart' =>'<path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5"></path>',
     ];
 
-    /** The four reasons shown beside the form (AuthShell perks). */
+    /** The reasons shown beside the form (AuthShell perks). */
     private const PERKS = [
         ['package', 'Track every order from your account'],
         ['map-pin', 'Save addresses for a faster checkout'],
-        ['sparkles', 'Try sarees on with AI before you buy'],
         ['heart', 'Keep a wishlist of your favourites'],
     ];
 
@@ -119,7 +118,7 @@ final class AuthHtml
         $code = '<div data-pf="otp-code-wrap" hidden><p class="neurva_hint" data-pf="otp-sent" role="status"></p>' . self::otpField('otp-code', 'Code')
             . '<p class="neurva_resend"><button type="button" class="neurva_inlineLink" data-pf="otp-resend">Resend code</button> <button type="button" class="neurva_inlineLink" data-pf="otp-change">Change number</button></p></div>';
         return '<form class="neurva_form" novalidate hidden id="pf-panel-otp" role="tabpanel" aria-labelledby="pf-mode-otp" data-pf="otp-form" data-pf-panel="otp" data-pf-signup="' . ($signup ? '1' : '0') . '">'
-            . $mobile . $code . ($signup ? $terms : '')
+            . $mobile . $code . ($signup ? $terms . '<div data-pf="otp-offers"><label class="neurva_check"><input type="checkbox" id="otp-offers"/><span class="neurva_box" aria-hidden="true"></span><span>Send me offers and new arrivals by SMS, WhatsApp and email.</span></label></div>' : '')
             . '<button type="submit" class="neurva_submit" data-pf="otp-submit">Send OTP</button></form>';
     }
 

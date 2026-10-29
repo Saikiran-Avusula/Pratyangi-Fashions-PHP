@@ -41,6 +41,17 @@ final class ShopInfo
         return self::$config?->shopName ?? 'Pratyangi Fashions';
     }
 
+    /** "Pratyangi Fashions (a unit of Vistaraverse E-Cart Private Limited)"; just the brand name when it is the company itself. */
+    public static function brandLine(): string
+    {
+        return self::brandName() === self::legalName() ? self::brandName() : self::brandName() . ' (a unit of ' . self::legalName() . ')';
+    }
+
+    public static function seReg(): string
+    {
+        return self::$config?->shopSeReg ?? '';
+    }
+
     public static function address(): string
     {
         return self::$config?->shopAddress ?? '';
@@ -64,6 +75,24 @@ final class ShopInfo
     public static function hours(): string
     {
         return self::$config?->shopHours ?? '';
+    }
+
+    public static function cin(): string
+    {
+        return self::$config?->shopCin ?? '';
+    }
+
+    /** https://wa.me/<digits>, or '' when SHOP_WHATSAPP is empty. */
+    public static function whatsappLink(): string
+    {
+        $digits = self::$config?->shopWhatsapp ?? '';
+        return $digits === '' ? '' : 'https://wa.me/' . $digits;
+    }
+
+    /** @return array{name:string,email:string,phone:string} the Grievance Officer; every part may be empty */
+    public static function grievance(): array
+    {
+        return ['name' => self::$config?->shopGrievanceName ?? '', 'email' => self::$config?->shopGrievanceEmail ?? '', 'phone' => self::$config?->shopGrievancePhone ?? ''];
     }
 
     /** @return array<string,string> network => https address, only the ones that are set */

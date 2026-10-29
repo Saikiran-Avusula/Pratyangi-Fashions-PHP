@@ -46,6 +46,31 @@ $t->test('a code mail is delivered with the login, sender, recipient, subject an
     $t->contains('Subject: ' . $mail['subject'], $got[0]['data']);
 });
 
+$t->test('the logo and icons travel inside the message (cid image parts), and no {placeholder} is left in any email', function () use ($t, $port, $messages): void {
+    \Pratyangi\Views\ShopInfo::init(Helpers::config(['WEB_ORIGIN' => 'http://localhost:8080', 'SHOP_SOCIAL_INSTAGRAM' => 'https://instagram.example.test/shop']));
+    $mail = MailTemplates::code('email_verify', '482913', 10, 'Asha Rao');
+    $t->contains('http://localhost:8080/assets/images/brand/email-logo.png', $mail['html'], 'the template still names the site address');
+    $before = count($messages());
+    (new SmtpMailer('127.0.0.1', $port, 'none', 'u', 'pw', 'Shop <no-reply@example.test>', 5))->send('asha@example.test', $mail['subject'], $mail['text'], $mail['html']);
+    $data = $messages()[$before]['data'];
+    $t->contains('multipart/related', $data);
+    $t->contains('Content-ID: <', $data);
+    $t->contains('image/png', $data);
+    $t->ok(str_contains($data, 'cid:img') && !str_contains($data, 'localhost:8080/assets'), 'the html points at the attached parts');
+    $t->contains('Hi Asha,', $mail['text']);
+    $t->contains('Hi there,', MailTemplates::code('reset', '123456', 10)['text']);
+    $order = ['orderNo' => 'PF-10021', 'name' => '', 'items' => [['Saree', 1, 100000]], 'itemsTotalPaise' => 100000, 'taxPaise' => 0, 'totalPaise' => 100000, 'address' => 'A', 'amountPaise' => 100000, 'method' => 'COD',
+        'invoiceCode' => 'k3JdQ9xT2mWp7Z', 'courier' => 'X', 'awb' => '1', 'trackingUrl' => 'https://t.example.test/1', 'refundPaise' => 100000, 'note' => 'n'];
+    $all = [\Pratyangi\Mail\EventTemplates::welcome(''), \Pratyangi\Mail\EventTemplates::passwordChanged('', 'now'), \Pratyangi\Mail\EventTemplates::emailChanged('', 'old', 'a@x.test', 'b@x.test')];
+    foreach (['orderConfirmed', 'paymentReceipt', 'paymentFailed', 'shipped', 'outForDelivery', 'delivered', 'cancelled', 'refundProcessed', 'returnUpdate'] as $event) {
+        $all[] = \Pratyangi\Mail\EventTemplates::$event($order);
+    }
+    foreach ($all as $m) {
+        $t->same(0, preg_match('/\{[A-Za-z_]+\}|\{\{|%[a-z_]+%|\$[a-z]+/i', $m['subject'] . $m['text'] . strip_tags($m['html'])), 'no placeholder in: ' . $m['subject']);
+        $t->contains('Hi there,', $m['text']);
+    }
+});
+
 $t->test('the server refusing the recipient, or not being there, is a MailException with none of the server words', function () use ($t, $port, $dir, $freePort): void {
     file_put_contents($dir . '/reject.flag', '1');
     $e = $t->throws(MailException::class, static fn () => (new SmtpMailer('127.0.0.1', $port, 'none', 'u', 'pw', 'a@example.test', 5))->send('x@example.test', 's', 't'));

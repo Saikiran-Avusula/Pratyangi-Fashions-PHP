@@ -336,9 +336,10 @@
     row.appendChild(group);
 
     var secondaryRow = h('div', P + 'secondary');
-    var wish = button(' Move to Wishlist (coming soon)', null);
-    wish.disabled = true;
-    wish.title = 'Wishlist coming soon';
+    var wish = button(' Move to Wishlist', null, function () {
+      if (win.PratyangiWishlist) win.PratyangiWishlist.add(item.id);
+      removeLine(item.id);
+    });
     wish.insertBefore(figmaImg('wishlist-heart.svg', 22), wish.firstChild);
     var drop = button(' Remove', null, function () { removeLine(item.id); });
     drop.insertBefore(figmaImg('trash.svg', 19), drop.firstChild);
@@ -465,7 +466,7 @@
       if (node) node.textContent = pair[1];
     });
     var lead = qs('bag-lead');
-    if (lead) lead.textContent = items.length ? 'Great choice! These beautiful pieces are waiting for you.' : 'Your bag is empty — discover something beautiful.';
+    if (lead) lead.textContent = items.length ? 'Great choice! These beautiful pieces are waiting for you.' : '';
 
     // notices
     var notices = qs('bag-notices');
@@ -485,7 +486,7 @@
       emptyNode = null;
       list.hidden = false;
       if (state.ready && items.length === 0) {
-        emptyNode = window.PratyangiEmptyState('shopping-bag', checkoutMode ? 'Your bag is empty.' : 'There are no sarees in your bag yet.', 'Add a saree you love and it will wait for you here.');
+        emptyNode = window.PratyangiEmptyState('shopping-bag', checkoutMode ? 'Your bag is empty.' : 'There are no sarees in your bag yet.', '');
         if (checkoutMode) {
           list.parentNode.insertBefore(emptyNode, list);
           list.hidden = true;

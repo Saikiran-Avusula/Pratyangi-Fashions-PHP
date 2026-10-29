@@ -165,6 +165,8 @@
 
   function verifyCode() {
     return post(signup ? '/auth/otp/signup/verify' : '/auth/otp/verify', { mobile: state.number, code: code.input.value }).then(function (result) {
+      var offers = A.qs('#otp-offers', form);
+      if (result.status === 201 && offers && offers.checked && win.PratyangiOffers) win.PratyangiOffers.save('signup', true);
       A.finish(result.data.user, result.status === 201);
     });
   }

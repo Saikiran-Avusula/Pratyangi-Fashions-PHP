@@ -15,7 +15,7 @@ $shown = $shown ?? null;
 // Mirrors the web's ProductCard / CatalogState markup (class names from the built CSS).
 
 if ($catalogError) {
-    ?><div class="GSLLNW_note" role="alert"><p>We could not load products right now. Please try again in a moment.</p></div><?php
+    ?><div class="GSLLNW_note" role="alert"><p>Products are being updated. Please try again in a moment.</p></div><?php
 } elseif ($products === []) {
     ?><div class="GSLLNW_note"><p>No products are available right now. Please check back soon.</p></div><?php
 } else {

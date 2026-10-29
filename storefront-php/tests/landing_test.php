@@ -42,7 +42,7 @@ $t->test('home renders with the shipped mock ERP: names, escaped rupee prices, h
     $t->contains('/assets/css/3wh3hbs4o_ca8.css', $b);
     $t->contains('/assets/site.css', $b);
     // two script tags since step 2B: site.js and bag.js (the cards' "Add to cart"), both same-origin and deferred
-    $t->same(2, substr_count($b, '<script'), 'exactly two script tags');
+    $t->same(3, substr_count($b, '<script'), 'exactly three script tags (site.js, bag.js, cookies.js)');
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script>', $b, 'the page scripts: same-origin, deferred, no inline code');
     $t->same(0, preg_match('/\son[a-z]+="/i', $b), 'no inline event handler attributes');
     $t->contains('<span class="pSCCwa_count" data-pf="bag-count">0</span></a>', $b, 'the bag icon carries the count (site.js fills it from the saved bag)');
@@ -76,7 +76,7 @@ $t->test('sold-out label, low stock, and in-stock products first', function () u
 $t->test('a hostile product name is escaped everywhere', function () use ($t, $mockFile): void {
     $evil = '<script>alert("x")</script> O\'Neil & "Sons"';
     $b = Helpers::app(Helpers::config(['ERP_MOCK_FILE' => $mockFile([[$evil, '500.00', 5]])]))->handle(Helpers::request('GET', '/'))->body();
-    $t->same(2, substr_count($b, '<script'), 'no raw script tag from the product name (only the two page scripts)');
+    $t->same(3, substr_count($b, '<script'), 'no raw script tag from the product name (only the three page scripts)');
     $t->contains('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt; O&#039;Neil &amp; &quot;Sons&quot;', $b);
     $t->same('&lt;a b=&quot;c&quot; &#039;d&#039;&gt;', View::e('<a b="c" \'d\'>'));
 });
@@ -84,7 +84,7 @@ $t->test('a hostile product name is escaped everywhere', function () use ($t, $m
 $t->test('ERP down: friendly message, no product cards, still 200', function () use ($t): void {
     $r = Helpers::app(null, null, null, new NotConnectedErp())->handle(Helpers::request('GET', '/'));
     $t->same(200, $r->status());
-    $t->contains('We could not load products right now', $r->body());
+    $t->contains('Products are being updated', $r->body());
     $t->ok(!str_contains($r->body(), 'JEjkwq_card'), 'no cards');
     $t->ok(!str_contains($r->body(), 'YnyroG_productGrid'), 'no grid');
 });
@@ -132,7 +132,7 @@ $t->test('unknown paths 404, traversal and odd paths blocked', function () use (
         '/assets/css', '/assets/css/', '/assets/../public/index.php'] as $path) {
         $r = $app->handle(Helpers::request('GET', $path));
         $t->same(404, $r->status(), $path);
-        $t->same('{"message":"That page does not exist."}', $r->body(), $path);
+        $t->same(str_starts_with($path, '/api') ? '{"message":"That page does not exist."}' : true, str_starts_with($path, '/api') ? $r->body() : str_contains($r->body(), 'Page not found'), $path);
     }
     $t->same(404, $app->handle(Helpers::request('POST', '/'))->status(), 'POST / is not a page');
     $t->same(404, $app->handle(Helpers::request('POST', '/soon'))->status());

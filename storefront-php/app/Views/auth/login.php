@@ -8,7 +8,7 @@ use Pratyangi\Views\View;
 /** @var string $query "" or "?next=/checkout", appended to the links between the sign-in pages */
 // LoginView.tsx
 $smsEnabled = $smsEnabled ?? true;
-$lead = $fromCheckout ? 'Please sign in to continue to checkout. Your bag is saved.' : 'Sign in to track your orders and save addresses.';
+$lead = ($expired ?? false) ? 'Please sign in again.' : ($fromCheckout ? 'Please sign in to continue to checkout. Your bag is saved.' : 'Sign in to track your orders and save addresses.');
 $forgot = '<a class="neurva_inlineLink" href="/forgot-password' . View::e($query) . '">Forgot password?</a>';
 ?><h1 class="neurva_title">Welcome back</h1><p class="neurva_lead"><?= View::e($lead) ?></p><?= ($googleClientId ?? null) !== null ? AuthHtml::google($googleClientId, false) : '' ?><?= $smsEnabled ? AuthHtml::modeTabs() : '' ?><form class="neurva_form" novalidate id="pf-panel-email" role="tabpanel" aria-labelledby="pf-mode-email" data-pf="auth-form" data-pf-panel="email"><?= AuthHtml::textField('auth-identifier', 'Email or mobile number', [
     'type' => 'text', 'placeholder' => 'you@example.com', 'autocomplete' => 'username', 'inputmode' => 'email',

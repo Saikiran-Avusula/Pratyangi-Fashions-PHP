@@ -52,9 +52,9 @@ $t->test('login: right password; wrong password and unknown email have their own
     $ok = $service()->signIn(['email' => 'buyer1@example.com', 'password' => 'Saree2026'], null);
     $t->same('buyer1@example.com', $service()->customerForToken($ok['token'])['email']);
     $e = $t->throws(ApiException::class, fn () => $service()->signIn(['email' => 'buyer1@example.com', 'password' => 'Wrong2026'], null));
-    $t->same([401, 'Incorrect password.', 'password'], [$e->status, $e->getMessage(), $e->field]);
+    $t->same([401, 'Email or password is incorrect', null], [$e->status, $e->getMessage(), $e->field]);
     $e = $t->throws(ApiException::class, fn () => $service()->signIn(['email' => 'nobody@example.com', 'password' => 'Saree2026'], null));
-    $t->same([404, 'We could not find an account with this email.', 'email', 'account_not_found'], [$e->status, $e->getMessage(), $e->field, $e->errorCode]);
+    $t->same([401, 'Email or password is incorrect', null, 'invalid_credentials'], [$e->status, $e->getMessage(), $e->field, $e->errorCode]);
     $service()->signOut($ok['token']);
     $t->same(null, $service()->customerForToken($ok['token']), 'logged out');
     $service()->signOut('never-existed');

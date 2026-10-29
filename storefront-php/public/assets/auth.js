@@ -368,7 +368,7 @@
       var blurError = value.trim() && state.touched && !isMobile ? validateIdentifier(value) : '';
       showField(email, state.errors.email || blurError || '', isMobile ? MOBILE_UNAVAILABLE : '', 'status');
       if (state.unknown && state.errors.email && signupLink) {
-        // "We could not find an account with this email." + a link to Create account (text and href are fixed; nothing typed is printed)
+        // only reached for a 404 account_not_found, which sign-in no longer sends (it answers 401 invalid_credentials for unknown and wrong alike)
         var holder = qs('p.neurva_error', email.slot || email.wrap);
         var link = make('a', 'neurva_inlineLink');
         link.href = signupLink.getAttribute('href');
@@ -509,7 +509,11 @@
       if (Object.keys(found).some(function (key) { return found[key]; })) { focusFirstInvalid(form); return; }
       run(function () {
         return call('/auth/signup', { method: 'POST', body: { name: v.name.trim(), email: v.email.trim().toLowerCase(), password: v.password } })
-          .then(function (data) { finish(data.user, true); });
+          .then(function (data) {
+            var offers = qs('#auth-offers', form);
+            if (offers && offers.checked && win.PratyangiOffers) win.PratyangiOffers.save('signup', true); // signed in by now; a failure only means no consent is recorded
+            finish(data.user, true);
+          });
       });
     });
     initReveal(form);

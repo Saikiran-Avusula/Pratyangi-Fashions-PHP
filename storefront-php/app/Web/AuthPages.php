@@ -30,7 +30,7 @@ final class AuthPages
     public function login(Request $request): Response
     {
         $fromCheckout = self::fromCheckout($request);
-        $card = View::render('auth/login', ['fromCheckout' => $fromCheckout, 'query' => $fromCheckout ? '?next=/checkout' : '', 'smsEnabled' => $this->smsEnabled, 'googleClientId' => $this->googleClientId]);
+        $card = View::render('auth/login', ['expired' => self::first($request, 'expired') === '1', 'fromCheckout' => $fromCheckout, 'query' => $fromCheckout ? '?next=/checkout' : '', 'smsEnabled' => $this->smsEnabled, 'googleClientId' => $this->googleClientId]);
         return $this->page($request, 'login', 'Sign In | Pratyangi Fashions',
             'Sign in to your Pratyangi Fashions account to track orders and save addresses.',
             $card, AuthHtml::loginTemplates(), $this->account($request->cookie(self::COOKIE)));
@@ -41,7 +41,7 @@ final class AuthPages
         $fromCheckout = self::fromCheckout($request);
         $card = View::render('auth/signup', ['fromCheckout' => $fromCheckout, 'query' => $fromCheckout ? '?next=/checkout' : '', 'smsEnabled' => $this->smsEnabled, 'googleClientId' => $this->googleClientId]);
         return $this->page($request, 'signup', 'Create Account | Pratyangi Fashions',
-            'Create your Pratyangi Fashions account for faster checkout, order tracking and AI try-on.',
+            'Create your Pratyangi Fashions account to track orders and save addresses.',
             $card, AuthHtml::welcomeTemplate() . AuthHtml::emailCodeTemplate(), $this->account($request->cookie(self::COOKIE)));
     }
 
@@ -109,6 +109,9 @@ final class AuthPages
         ]);
         // the mobile one-time-code form is part of the sign-in and sign-up pages only, and only while SMS_ENABLED=true
         $scripts = in_array($page, ['login', 'signup'], true) && $this->smsEnabled ? ['site.js', 'auth.js', 'auth-otp.js'] : ['site.js', 'auth.js'];
+        if ($page === 'signup') {
+            array_splice($scripts, 1, 0, 'offers.js'); // the "offers and new arrivals" tick box
+        }
         $response = Response::html(View::render('layout', [
             'title' => $title,
             'description' => $description,

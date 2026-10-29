@@ -38,7 +38,7 @@ final class DbGuard
         echo "Database: host={$host} port={$port} name={$name}\n";
         $pdo = Db::connectWith($host, $port, $name, $user, $pass);
         if (getenv('PF_TEST_APPLY_SCHEMA') === '1') {
-            foreach (['001_phase1_accounts.sql', '002_rate_limits.sql', '004_addresses.sql', '005_orders.sql', '006_google_identities.sql'] as $file) {
+            foreach (['001_phase1_accounts.sql', '002_rate_limits.sql', '004_addresses.sql', '005_orders.sql', '006_google_identities.sql', '007_mail_events.sql', '008_consent_numbers.sql'] as $file) {
                 $filePath = dirname(__DIR__, 2) . '/sql/' . $file;
                 if (!file_exists($filePath)) {
                     continue;
@@ -82,7 +82,7 @@ final class DbGuard
     /** Empties the phase 1 tables so a run starts clean. */
     public static function clean(\PDO $pdo): void
     {
-        $tables = ['shop_razorpay_orders', 'shop_order_items', 'shop_orders', 'shop_customer_addresses', 'shop_sessions', 'shop_password_resets', 'shop_email_verifications', 'shop_customers', 'shop_rate_limits'];
+        $tables = ['shop_mail_events', 'shop_razorpay_orders', 'shop_order_items', 'shop_orders', 'shop_customer_addresses', 'shop_sessions', 'shop_password_resets', 'shop_email_verifications', 'shop_customers', 'shop_rate_limits'];
         foreach (['shop_otp_codes', 'shop_verification_codes'] as $optional) {
             $exists = $pdo->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
             $exists->execute([$optional]);

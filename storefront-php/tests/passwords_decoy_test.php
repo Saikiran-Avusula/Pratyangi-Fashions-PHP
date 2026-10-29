@@ -51,11 +51,11 @@ $t->test('the unknown-email path computes no hash: Passwords::hash is not involv
     $body = substr($body, 0, (int) strpos($body, '}'));
     $t->ok(!str_contains($body, 'hash('), 'verifyAgainstDecoy must not call hash');
     $t->same(1, substr_count($body, 'password_verify('), 'exactly one password_verify');
-    // and through the service: an unknown email answers 404 after touching only the customer lookup
+    // and through the service: an unknown email answers 401 after touching only the customer lookup
     $db = new FakeAuthPdo();
     $svc = new AuthService($db, new CustomerRepo($db), new SessionRepo($db), new TokenRepo($db), 30, new FixedClock());
     $e = $t->throws(ApiException::class, fn () => $svc->signIn(['email' => 'ghost@example.com', 'password' => 'Saree2026'], null));
-    $t->same(404, $e->status);
+    $t->same(401, $e->status);
     $t->same(1, count($db->log), 'one lookup, nothing else');
 });
 

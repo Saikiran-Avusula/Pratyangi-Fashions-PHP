@@ -489,7 +489,7 @@
         a.style.display = hit ? '' : 'none';
         if (hit) any = true;
       });
-      if (empty) { empty.textContent = 'No matching items in this catalog preview.'; empty.hidden = any; }
+      if (empty) { empty.textContent = 'No matching items.'; empty.hidden = any; }
     }
     function showProducts(products) {
       productsBox.textContent = '';
@@ -826,7 +826,7 @@
     box.className = 'pf_emptyState';
     var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + EMPTY_ICONS[icon] + '</svg>';
     box.insertAdjacentHTML('afterbegin', svg);
-    [['h2', title], ['p', line]].forEach(function (pair) { var n = doc.createElement(pair[0]); n.textContent = pair[1]; box.appendChild(n); });
+    [['h2', title], ['p', line]].forEach(function (pair) { if (!pair[1]) return; var n = doc.createElement(pair[0]); n.textContent = pair[1]; box.appendChild(n); });
     var actions = doc.createElement('div');
     actions.className = 'pf_emptyActions';
     var shop = doc.createElement('a');
@@ -861,6 +861,7 @@
 
   win.PratyangiWishlist = {
     KEY: WISH_KEY, EVENT: WISH_EVENT, read: wishRead,
+    add: function (sku) { var list = wishRead(); if (list.indexOf(sku) === -1) wishWrite(list.concat(sku)); },
     remove: function (sku) { wishWrite(wishRead().filter(function (s) { return s !== sku; })); }
   };
 

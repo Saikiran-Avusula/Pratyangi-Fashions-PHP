@@ -30,7 +30,7 @@ final class PaymentService
     private const REUSE_SECONDS = 1800;
     private const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; // no look-alikes (0/O, 1/I/L)
 
-    /** @param \Closure():string|null $newOrderNo tests pass their own */
+    /** @param \Closure():string|null $newOrderNo tests pass their own @param \Closure(StoredOrder):void|null $onPlaced called once when the ERP has taken the order (the confirmation email) */
     public function __construct(
         private OrderRepo $orders,
         private ErpPort $erp,
@@ -41,6 +41,7 @@ final class PaymentService
         private Clock $clock,
         private Logger $logger,
         private ?\Closure $newOrderNo = null,
+        private ?\Closure $onPlaced = null,
     ) {
     }
 
@@ -178,6 +179,11 @@ final class PaymentService
                 'paymentStatus' => 'PAID', // verified and recorded: never COD for an online order
             ]);
             $this->orders->markPlaced($order->id, $created['erpOrderId'], $created['status']);
+            try {
+                ($this->onPlaced)?->__invoke($this->orders->findById($order->id) ?? $order);
+            } catch (\Throwable) {
+                $log->warn('payment.placed_hook_failed', ['orderNo' => $order->orderNo]);
+            }
         } catch (ErpOrderRejectedException $e) {
             if ($e->isFinal()) {
                 $this->orders->markNotFulfilled($order->id, $e->kind, $e->skus);

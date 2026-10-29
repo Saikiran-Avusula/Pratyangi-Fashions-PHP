@@ -106,7 +106,7 @@ $t->test('login uses the exact lookup (a look-alike is "unknown")', function () 
     $db = fakeDb();
     $svc = service($db, new RecordingMailer());
     $e = $t->throws(ApiException::class, fn () => $svc->signIn(['email' => 'josé@example.com', 'password' => 'whatever'], null));
-    $t->same([404, AuthService::UNKNOWN_EMAIL, 'email', 'account_not_found'], [$e->status, $e->getMessage(), $e->field, $e->errorCode]);
+    $t->same([401, AuthService::BAD_CREDENTIALS, null, 'invalid_credentials'], [$e->status, $e->getMessage(), $e->field, $e->errorCode]);
     $t->same([], $db->statements('UPDATE shop_customers'));
 });
 

@@ -69,8 +69,9 @@ final class ShopPages
         $body = View::render('shop/checkout', [
             'account' => HeaderAccount::fromRow($row),
             'addresses' => $addresses,
+            'smsEnabled' => $this->smsEnabled,
         ]);
-        return $this->page($request, 'Checkout | Pratyangi Fashions', 'Choose your delivery address and delivery option, then review your Pratyangi Fashions order.', $body, ['site.js', 'bag.js', 'address-book.js', 'bag-page.js']);
+        return $this->page($request, 'Checkout | Pratyangi Fashions', 'Choose your delivery address and delivery option, then review your Pratyangi Fashions order.', $body, ['site.js', 'bag.js', 'offers.js', 'address-book.js', 'bag-page.js']);
     }
 
     public function account(Request $request, string $section = 'overview'): Response
@@ -110,12 +111,13 @@ final class ShopPages
             'memberSince' => self::memberSince($row['created_at'] ?? null),
             'mobile' => $mobile,
             'emailVerified' => ($row['email_verified_at'] ?? null) !== null,
+            'showVerify' => ($request->query['verify'] ?? '') === '1', // the banner only when asked for: before a first order, a password reset or a change of email
             'addresses' => $addresses,
             'smsEnabled' => $this->smsEnabled,
             'orderCount' => $orderCount,
             'section' => $section,
         ]);
-        return $this->page($request, ($section === 'overview' ? 'My Account' : ucfirst($section)) . ' | Pratyangi Fashions', 'Manage your Pratyangi Fashions orders, addresses and more.', $body, ['site.js', 'address-book.js', 'account.js']);
+        return $this->page($request, ($section === 'overview' ? 'My Account' : ucfirst($section)) . ' | Pratyangi Fashions', 'Manage your Pratyangi Fashions orders, addresses and more.', $body, ['site.js', 'offers.js', 'address-book.js', 'account.js']);
     }
 
     /** "Oct 2026" from the SQL created_at (UTC), or "" when it is missing or unreadable (the web's memberSince()). */
@@ -146,7 +148,8 @@ final class ShopPages
 
     private function signIn(Request $request, string $to): Response
     {
-        $response = Response::html('', 302)->setHeader('Location', $to);
+        $token = $request->cookie(self::COOKIE);
+        $response = Response::html('', 302)->setHeader('Location', $to . ($token !== null && $token !== '' ? '&expired=1' : '')); // a cookie that no longer works = the session ended
         return self::perVisitor($response, $request->cookie(self::COOKIE), true);
     }
 

@@ -91,7 +91,7 @@ $t->test('logout: 204, cookie cleared, old cookie no longer works; login again',
     $cookie = '';
     $t->same(204, $call('POST', '/api/v1/auth/logout')->status(), 'logout with no cookie is fine');
     $bad = $call('POST', '/api/v1/auth/login', ['email' => $email, 'password' => 'Wrong2026']);
-    $t->same([401, 'Incorrect password.'], [$bad->status(), $bad->decoded()['message']]);
+    $t->same([401, 'Email or password is incorrect'], [$bad->status(), $bad->decoded()['message']]);
     $ok = $call('POST', '/api/v1/auth/login', ['email' => $email, 'password' => 'Saree2026']);
     $t->same([200, ['user']], [$ok->status(), array_keys($ok->decoded())]);
     $cookie = $cookieOf($ok);

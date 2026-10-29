@@ -11,6 +11,13 @@ declare(strict_types=1);
 return [
     // production | development | test. Missing = production (Secure cookie, no mock ERP, no log mailer).
     'APP_ENV' => 'production',
+    // true on a test site: every answer carries X-Robots-Tag: noindex so search engines stay away. Missing = false.
+    'STAGING' => 'false',
+    // true during a live deploy: every page shows "We'll be right back" (503). MAINTENANCE_ALLOW_IP = your own IPs (comma-separated) that still see the shop.
+    'MAINTENANCE' => 'false',
+    'MAINTENANCE_ALLOW_IP' => '',
+    // Secret for /server-check?key=... (the server health page). At least 16 random characters. Empty = the page refuses every request.
+    'SERVER_CHECK_KEY' => '',
 
     // MySQL 8
     'DB_HOST' => '127.0.0.1',
@@ -69,6 +76,8 @@ return [
     // SMS_ENABLED: false (default) = email only. Hides the Mobile OTP tabs and Add mobile, and the mobile routes answer 503 "Mobile sign-in coming soon"; first order needs a verified EMAIL.
     // Set true once the SMS template is approved: mobile sign-in, Add mobile, reset by mobile and the verified-mobile rule for a first order switch on.
     'SMS_ENABLED' => 'false',
+    // ORDER_OTP: when an order needs a code sent to its delivery number (only while SMS_ENABLED is true): cod (default) = every cash-on-delivery order, always = every order, new_number = a number not verified yet, off = never.
+    'ORDER_OTP' => 'cod',
     // Mobile OTP sign-in (PHP-only addition; apply sql/003_mobile_otp.sql first).
     // OTP_PEPPER: a long random secret (32+ characters) that keys the stored code hashes. REQUIRED in production; without it the two OTP routes answer 503.
     'OTP_PEPPER' => '',
@@ -105,6 +114,16 @@ return [
     'SHOP_SUPPORT_EMAIL' => '',
     // For example: Mon-Sat 10:00-18:00 IST
     'SHOP_HOURS' => '',
+    // Company identity number, 21 characters (for example U12345TG2020PTC123456). Shown in the footer, on /contact and in the emails.
+    'SHOP_CIN' => '',
+    // Shops & Establishments registration number. Shown on /contact only; empty = hidden.
+    'SHOP_SE_REG' => '',
+    // WhatsApp number as digits only, with the country code (919876543210). Makes the footer link and the /contact button (https://wa.me/<digits>).
+    'SHOP_WHATSAPP' => '',
+    // The Grievance Officer shown on /contact. Name and phone are optional; the block is hidden when the email is empty.
+    'SHOP_GRIEVANCE_NAME' => '',
+    'SHOP_GRIEVANCE_EMAIL' => '',
+    'SHOP_GRIEVANCE_PHONE' => '',
     // Orders above this many rupees ship free: the top bar of every page says so. Empty = the line is not shown. Whole rupees, for example 1999.
     'SHOP_FREE_SHIPPING_ABOVE' => '',
     // Full https addresses of the shop's pages. Only the ones set get an icon in the footer.
@@ -112,6 +131,8 @@ return [
     'SHOP_SOCIAL_YOUTUBE' => '',
     'SHOP_SOCIAL_INSTAGRAM' => '',
     'SHOP_SOCIAL_WHATSAPP' => '',
+    // Google sign-in: the public OAuth client id (123-abc.apps.googleusercontent.com). Empty = no Google button. Not a secret.
+    'GOOGLE_CLIENT_ID' => '',
     // 0 to 3600
     'CATALOG_CACHE_SECONDS' => '60',
     // Must be writable by PHP and NOT inside the web root. Empty = cache/catalog in the project folder.

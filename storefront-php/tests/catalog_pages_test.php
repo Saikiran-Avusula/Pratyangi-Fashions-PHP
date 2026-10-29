@@ -51,7 +51,7 @@ $t->test('/new-arrivals with the shipped mock ERP: 200, Node markup, filters, ca
     $t->same(0, substr_count($b, ' hidden="" data-pf="clear"'), 'no filter ticked: the clear button is hidden');
     $t->contains('/assets/css/0xslsry9_slir.css', $b);
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/listing.js"></script>', $b);
-    $t->same(3, substr_count($b, '<script'));
+    $t->same(4, substr_count($b, '<script'));
     $t->same(0, preg_match('/<script(?![^>]*\ssrc=)/i', $b), 'no inline script');
     $t->same(0, preg_match('/\son[a-z]+="/i', $b), 'no inline event handler');
     $t->same(0, preg_match('#(src|href)="(https?:)?//#', $b), 'no external resource');
@@ -131,7 +131,7 @@ $t->test('/product?sku=: 200 with the Node layout, price, MRP, tax line, stock l
     $t->ok(!str_contains($b, 'udK_nG_soldOut'));
     $t->ok(!str_contains($b, 'uploads/products'), 'the ERP picture path is not used');
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/product.js"></script>', $b);
-    $t->same(3, substr_count($b, '<script'));
+    $t->same(4, substr_count($b, '<script'));
     $t->same(0, preg_match('/<script(?![^>]*\ssrc=)/i', $b));
     $t->contains('/assets/css/3wh3hbs4o_ca8.css', $b);
     $t->ok(!str_contains($b, '0xslsry9'), 'the product page does not load the listing sheet');
@@ -197,7 +197,7 @@ $t->test('not found: unknown sku, missing sku, empty sku (404, the Node message,
         $t->contains('<title>Product | Pratyangi Fashions</title>', $b, $uri);
         $t->ok(!str_contains($b, 'udK_nG_product'), $uri);
         $t->ok(!str_contains($b, 'alert(1)'), $uri . ': the address is never printed');
-        $t->same(1, substr_count($b, '<script'), $uri . ': only the page script');
+        $t->same(2, substr_count($b, '<script'), $uri . ': only the page script');
     }
     // the first sku wins, like URLSearchParams.get
     $t->same(200, $get($app, '/product?sku=MOCK-SAR-001&sku=NO-SUCH')->status());
@@ -238,16 +238,16 @@ $t->test('hostile product data is escaped: names, sku, category, fabric, colour 
 $t->test('catalogue unavailable: the friendly state, retry button, no products, no cache; empty catalogue message; never the reason', function () use ($t, $get, $mockFile, $appWith): void {
     $off = Helpers::app(null, null, null, new NotConnectedErp());
     $r = $get($off, '/new-arrivals');
-    $t->same(200, $r->status());
+    $t->same(503, $r->status());
     $b = $r->body();
-    $t->contains('<div class="GSLLNW_note" role="alert"><p>We could not load products right now. Please try again in a moment.</p><button type="button" data-pf="retry">Try again</button></div>', $b);
+    $t->contains('<div class="GSLLNW_note" role="alert"><p>Products are being updated. Please try again in a moment.</p><button type="button" data-pf="retry">Try again</button></div>', $b);
     $t->contains('<h1>New Arrivals</h1>', $b);
     $t->ok(!str_contains($b, 'JEjkwq_card') && !str_contains($b, '_4HCqHa_sidebar'), 'no products and no filters');
     $t->same('no-store', $r->header('Cache-Control'));
     $t->ok(!str_contains($b, 'catalogue is not available yet'), 'the internal reason is not shown');
     $p = $get($off, '/product?sku=MOCK-SAR-001');
-    $t->same(200, $p->status(), 'an unreadable catalogue is not a "not found"');
-    $t->contains('We could not load products right now. Please try again in a moment.', $p->body());
+    $t->same(503, $p->status(), 'an unreadable catalogue is not a "not found"');
+    $t->contains('Products are being updated. Please try again in a moment.', $p->body());
     $t->contains('data-pf="retry"', $p->body());
     $t->ok(!str_contains($p->body(), 'We could not find this product'));
     $t->same('no-store', $p->header('Cache-Control'));
@@ -255,8 +255,8 @@ $t->test('catalogue unavailable: the friendly state, retry button, no products, 
     $broken = Helpers::tempDir('pf_pages_') . '/erp.json';
     file_put_contents($broken, '{not json');
     $r = $get($appWith($broken), '/new-arrivals');
-    $t->same(200, $r->status());
-    $t->contains('We could not load products right now.', $r->body());
+    $t->same(503, $r->status());
+    $t->contains('Products are being updated.', $r->body());
     // empty catalogue
     $none = $appWith($mockFile([]));
     $r = $get($none, '/new-arrivals');
@@ -305,7 +305,7 @@ $t->test('productHref and catalogLink: encodeURIComponent and URLSearchParams sp
 
 $t->test('header and footer links all resolve: built routes (the bag icon goes to /bag), anchors', function () use ($t, $get): void {
     $app = Helpers::app();
-    $built = ['/', '/soon', '/login', '/signup', '/forgot-password', '/verify-email', '/account', '/account/orders', '/account/addresses', '/account/help', '/wishlist', '/search', '/new-arrivals', '/product', '/bag', '/checkout', '/privacy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
+    $built = ['/', '/soon', '/login', '/signup', '/forgot-password', '/verify-email', '/account', '/account/orders', '/account/addresses', '/account/help', '/wishlist', '/search', '/new-arrivals', '/product', '/bag', '/checkout', '/privacy', '/cookie-policy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
     $checked = [];
     foreach (['/', '/new-arrivals', '/product?sku=MOCK-SAR-001', '/product?sku=NOPE', '/login'] as $uri) {
         $b = $get($app, $uri)->body();
@@ -345,7 +345,7 @@ $t->test('header and footer links all resolve: built routes (the bag icon goes t
     // the exact menu links of the web
     $b = $get($app, '/')->body();
     foreach (['Half Sarees' => '/new-arrivals', 'Uppada' => '/new-arrivals?fabric=Uppada+Pattu+Saree', 'Banarasi' => '/new-arrivals?fabric=Banarasi+Saree',
-        'Kanchipuram Patti' => '/new-arrivals?fabric=Kanchi+Pattu+Saree', 'Dharmavaram' => '/new-arrivals?fabric=Dharmavaram+Saree', 'Soft Silk' => '/new-arrivals?fabric=Bangalore+Silk+Saree',
+        'Kanchipuram Pattu' => '/new-arrivals?fabric=Kanchi+Pattu+Saree', 'Dharmavaram' => '/new-arrivals?fabric=Dharmavaram+Saree', 'Soft Silk' => '/new-arrivals?fabric=Bangalore+Silk+Saree',
         'Bridal Sarees' => '/new-arrivals?occasion=Wedding', 'Gadwal' => '/new-arrivals', 'Men’s Ethnic Wear' => '/new-arrivals', 'Jewellery' => '/new-arrivals', 'Accessories' => '/new-arrivals'] as $label => $href) {
         $t->contains('<li><a href="' . $href . '">' . $label . '</a></li>', $b, $label);
     }
@@ -396,7 +396,7 @@ $t->test('every image and style the new pages point to exists', function () use 
 
 $t->test('StaticFiles: exactly the named scripts are JavaScript', function () use ($t, $root): void {
     $app = Helpers::app();
-    foreach (['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js'] as $name) {
+    foreach (['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'] as $name) {
         $r = $app->handle(Helpers::request('GET', '/assets/' . $name));
         $t->same(200, $r->status(), $name);
         $t->same('text/javascript; charset=utf-8', $r->header('Content-Type'), $name);
@@ -407,7 +407,7 @@ $t->test('StaticFiles: exactly the named scripts are JavaScript', function () us
     }
     // every .js file in public/assets is either on the allow-list or refused
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/public/assets', FilesystemIterator::SKIP_DOTS));
-    $allowed = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js'];
+    $allowed = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'];
     foreach ($it as $file) {
         if (strtolower($file->getExtension()) === 'js') {
             $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root . '/public/assets/')));

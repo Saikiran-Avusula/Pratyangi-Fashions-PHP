@@ -17,7 +17,7 @@ $env:PF_TEST_DB_HOST = '127.0.0.1'; $env:PF_TEST_DB_PORT = '3399'; $env:PF_TEST_
 $env:PF_TEST_DB_USER = 'root'; $env:PF_TEST_DB_PASS = (Get-ErpConfigValue 'pass')
 $env:PF_TEST_APPLY_SCHEMA = '1'; $env:PF_TEST_APPLY_OTP = '1'
 Set-Location $project
-foreach ($t in $(if ($Only.Count) { $Only } else { @('db_otp_test', 'db_accounts_test', 'db_flow_test', 'db_address_test', 'db_order_test') })) {
+foreach ($t in $(if ($Only.Count) { $Only } else { @('db_otp_test', 'db_accounts_test', 'db_flow_test', 'db_address_test', 'db_order_test', 'db_event_mail_test') })) {
   "=== $t"
   # PowerShell 5.1 turns a native program's stderr (the app's own log lines) into errors; keep going and read the exit code instead
   $ErrorActionPreference = 'Continue'
