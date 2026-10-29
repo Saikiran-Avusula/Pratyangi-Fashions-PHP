@@ -37,6 +37,7 @@ $pages = [
     ['login', '/login', ''],
     ['signup', '/signup', ''],
     ['forgot', '/forgot-password', ''],
+    ['help-account', '/account-help', ''],
     ['account', '/account', ''],
     ['account-orders', '/account/orders', ''],
     ['account-addresses', '/account/addresses', ''],

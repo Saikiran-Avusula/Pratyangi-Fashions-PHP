@@ -105,6 +105,14 @@ final class AuthController
         return Response::json($otp->request($input['mobile'], $context->clientIp(), $context, $purpose));
     }
 
+    /** PHP-only ("Forgot email or mobile?"): the same answer for every number. */
+    public function helpSms(Request $request, Context $context): Response
+    {
+        $input = Validator::otpRequest($request->jsonBody());
+        $this->otp()->sendEmailHint($input['mobile'], $context);
+        return Response::json(['message' => "If this number has an account, we've sent an SMS."]);
+    }
+
     /** PHP-only: 'login' signs the account in and never creates one; 'signup' creates it (no name, no email asked) and signs in. */
     public function otpVerify(Request $request, Context $context, string $purpose = 'login'): Response
     {

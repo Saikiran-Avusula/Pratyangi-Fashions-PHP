@@ -36,7 +36,7 @@ foreach ([true, false] as $sms) {
     $t->test('console is clean with SMS_ENABLED=' . ($sms ? 'true' : 'false'), function () use ($t, $sms, $port, $tmp, $chrome, $cookie, $router): void {
         $server = BrowserRig::serve($router, $port, ['PF_CC_SMS' => $sms ? 'true' : 'false', 'PF_CC_COOKIE' => $cookie]);
         try {
-            foreach (['/login', '/signup', '/forgot-password', '/account', '/no-such-page', '/__e/403', '/__e/429', '/__e/500', '/__e/503'] as $path) {
+            foreach (['/login', '/signup', '/forgot-password', '/account-help', '/account', '/no-such-page', '/__e/403', '/__e/429', '/__e/500', '/__e/503'] as $path) {
                 $out = BrowserRig::dump($chrome, $tmp . '/profile', 'http://127.0.0.1:' . $port . $path);
                 $errors = array_values(array_filter(explode("\n", $out), static fn (string $l): bool => preg_match('/:CONSOLE[:(]/', $l) === 1));
                 $t->same([], $errors, $path . ' sms=' . ($sms ? 'on' : 'off'));

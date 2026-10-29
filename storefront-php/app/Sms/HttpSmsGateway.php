@@ -8,7 +8,7 @@ namespace Pratyangi\Sms;
  * SMS_API_URL setting only, the query carries username, apikey, senderid, mobile (91 + 10 digits), message and templateid.
  * The key travels in the query string, so nothing here ever puts the URL, the key, the number or the code in an error text or a log.
  */
-final class HttpSmsGateway implements SmsGateway
+final class HttpSmsGateway implements SmsGateway, SmsHintGateway
 {
     private const MAX_BODY_BYTES = 65536;
 
@@ -21,19 +21,33 @@ final class HttpSmsGateway implements SmsGateway
         private string $templateText,
         private int $timeoutSeconds = 10,
         private ?string $caBundle = null,
+        private ?string $hintTemplateId = null, // the approved template of the email hint; none = no hint is sent
+        private string $hintTemplateText = 'Your Pratyangi Fashions account email is {#var#}',
     ) {
     }
 
     public function sendOtp(string $mobile, string $code): void
     {
-        $message = str_replace('{#var#}', $code, $this->templateText);
+        $this->submit($mobile, str_replace('{#var#}', $code, $this->templateText), $this->templateId);
+    }
+
+    public function sendEmailHint(string $mobile, string $maskedEmail): void
+    {
+        if ($this->hintTemplateId === null || $this->hintTemplateId === '') {
+            throw new SmsException('The email hint SMS template is not set up.');
+        }
+        $this->submit($mobile, str_replace('{#var#}', $maskedEmail, $this->hintTemplateText), $this->hintTemplateId);
+    }
+
+    private function submit(string $mobile, string $message, string $templateId): void
+    {
         $query = http_build_query([
             'username' => $this->username,
             'apikey' => $this->apiKey,
             'senderid' => $this->senderId,
             'mobile' => '91' . substr($mobile, -10),
             'message' => $message,
-            'templateid' => $this->templateId,
+            'templateid' => $templateId,
         ]);
         $url = $this->apiUrl . (str_contains($this->apiUrl, '?') ? '&' : '?') . $query;
 

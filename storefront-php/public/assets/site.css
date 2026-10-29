@@ -316,3 +316,14 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 /* Google avatar over the initial circle (header, /account card, mobile menu) */
 .pSCCwa_avatar > img, .P71-SG_avatar > img { position: absolute; inset: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .pSCCwa_menuGroup a > img[data-pf="avatar-img"] { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; margin-right: 8px; }
+
+/* /account-help ("Forgot email or mobile?") */
+.pf_help { display: flex; flex-direction: column; gap: 20px; }
+.pf_helpList { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; line-height: 1.5; }
+.pf_helpList .pf_googleOr { display: none; }
+.pf_helpList .pf_google { margin-top: 8px; }
+.pf_helpContact { display: flex; flex-direction: column; gap: 8px; }
+.pf_helpContact p { margin: 0; }
+.pf_helpHeading { margin: 0; font-size: 16px; }
+.pf_help a.neurva_submit { display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
+.pf_helpContact a.neurva_inlineLink { display: inline-flex; align-items: center; min-height: 44px; }

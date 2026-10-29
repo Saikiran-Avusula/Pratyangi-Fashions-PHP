@@ -309,4 +309,23 @@ $t->test('mail wording: the codes are plain text, the reset mail and the verify 
     }
 });
 
+$t->test('/account-help: the hints, the contact block, the Google button and the SMS form only when set; linked from /login', function () use ($t): void {
+    $settings = ['SHOP_WHATSAPP' => '919989233328', 'SHOP_SUPPORT_EMAIL' => 'help@example.test', 'SHOP_HOURS' => '9 to 5', 'GOOGLE_CLIENT_ID' => 'abc.apps.googleusercontent.com'];
+    $get = static fn (array $extra): string => Helpers::app(Helpers::config($extra + $settings))->handle(Helpers::request('GET', '/account-help'))->body();
+    $on = $get(['SMS_ENABLED' => 'true']);
+    foreach (['<title>Forgot email or mobile? | Pratyangi Fashions</title>', 'data-pf-auth="help"', 'Try Sign in with Google', 'data-pf="google-button"',
+        'Search your inbox for “Welcome to Pratyangi Fashions” to find the email you used.', 'Your mobile number is in <a class="neurva_inlineLink" href="/account">My account</a>',
+        'href="https://wa.me/919989233328"', 'href="mailto:help@example.test"', '9 to 5', 'data-pf="help-form"', 'id="help-mobile"'] as $needle) {
+        $t->contains($needle, $on);
+    }
+    $off = $get(['SMS_ENABLED' => 'false', 'GOOGLE_CLIENT_ID' => '']);
+    $t->ok(!str_contains($off, 'help-form') && !str_contains($off, 'help-mobile'), 'no mobile form while SMS_ENABLED=false');
+    $t->ok(!str_contains($off, 'data-pf="google-button"'), 'no Google button without GOOGLE_CLIENT_ID');
+    $t->contains('Search your inbox', $off);
+    $bare = $get(['SHOP_WHATSAPP' => '', 'SHOP_SUPPORT_EMAIL' => '', 'SHOP_HOURS' => '']);
+    $t->ok(!str_contains($bare, 'wa.me') && !str_contains($bare, 'mailto:'), 'empty settings leave their line out');
+    $login = Helpers::app()->handle(Helpers::request('GET', '/login'))->body();
+    $t->contains('<a href="/account-help">Forgot email or mobile?</a>', $login);
+});
+
 exit($t->finish());

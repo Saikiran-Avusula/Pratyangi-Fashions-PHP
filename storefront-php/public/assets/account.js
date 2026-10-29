@@ -58,7 +58,7 @@
     var left = seconds;
     (function tick() {
       button.disabled = left > 0;
-      button.textContent = left > 0 ? idleText + ' in ' + left + 's' : idleText;
+      button.textContent = left > 0 ? (idleText === 'Resend code' ? 'Resend' : idleText) + ' in ' + Math.floor(left / 60) + ':' + (left % 60 < 10 ? '0' : '') + (left % 60) : idleText;
       if (left > 0) { left -= 1; win.setTimeout(tick, 1000); }
     })();
   }
@@ -88,8 +88,8 @@
           cooldown(send, 'Resend code', r.data.resendAfter || RESEND_SECONDS);
         } else {
           say(result, messageOf(r), true);
-          send.disabled = false;
-          send.textContent = 'Send code';
+          if (r.status === 429 && r.data.retryAfter) cooldown(send, 'Send code', r.data.retryAfter);
+          else { send.disabled = false; send.textContent = 'Send code'; }
         }
       });
     });
@@ -178,7 +178,9 @@
         send.disabled = false;
         if (!r.ok) {
           say(result, messageOf(r), true);
-          if (step === 'code') cooldown(resend, 'Resend code', r.status === 429 && r.data.resendAfter ? r.data.resendAfter : 0);
+          var wait = r.status === 429 && r.data.retryAfter ? r.data.retryAfter : 0;
+          if (step === 'code') cooldown(resend, 'Resend code', wait);
+          else if (wait) cooldown(send, 'Send code', wait);
           return;
         }
         typed = value;

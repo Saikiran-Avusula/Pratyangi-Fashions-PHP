@@ -38,6 +38,7 @@
 
   var state = { step: 'number', busy: false, errors: {}, formError: '', notice: '', resendIn: 0, number: '' };
   var countdown = 0;
+  var lock = A.rateLock('pf_lock:otp-' + (signup ? 'signup' : 'login'), function () { return form; }, function () { return [submit, resend]; });
 
   /* ------------------------------------------------------------------ the API */
 
@@ -54,7 +55,7 @@
         if (!response.ok) {
           var error = new A.AuthError(data.message != null ? data.message : GENERIC, data.field, data.errors);
           error.status = response.status;
-          error.retryAfter = isNaN(retry) ? 0 : retry;
+          error.retryAfter = data.retryAfter || (isNaN(retry) ? 0 : retry);
           throw error;
         }
         return { status: response.status, data: data };
@@ -67,8 +68,8 @@
   /* ------------------------------------------------------------------ painting */
 
   function paintResend() {
-    resend.disabled = state.resendIn > 0 || state.busy;
-    resend.textContent = state.resendIn > 0 ? 'Resend code in ' + state.resendIn + 's' : 'Resend code';
+    resend.disabled = state.resendIn > 0 || state.busy || resend.hasAttribute('data-pf-locked');
+    resend.textContent = state.resendIn > 0 ? 'Resend in ' + A.clock(state.resendIn) : 'Resend code';
   }
   function startCountdown(seconds) {
     win.clearTimeout(countdown);
@@ -120,7 +121,7 @@
     mobile.input.readOnly = onCode;
     A.paintButton(submit, false, buttonText(), '');
   }
-  function run(task) {
+  function run(task, resending) {
     state.formError = '';
     state.notice = '';
     setBusy(true);
@@ -128,7 +129,11 @@
     return task().catch(function (error) {
       var d = A.describeError(error);
       state.errors = { mobile: d.errors.mobile, code: d.errors.code };
-      if (error && error.status === 429 && error.retryAfter && state.step !== 'number') startCountdown(error.retryAfter);
+      if (error && error.status === 429) {
+        // asking for a code too soon only holds the resend link; every other 429 holds the form
+        if (resending && error.retryAfter) { startCountdown(error.retryAfter); state.formError = d.message; paintAll(); } else lock.start(error.retryAfter || 60);
+        return;
+      }
       // a message that belongs to an input is shown at that input; everything else at the top of the form
       if (!d.errors.mobile && !d.errors.code) {
         if (state.step !== 'number' && error && error.status === 400) state.errors.code = d.message;
@@ -193,7 +198,7 @@
 
   resend.addEventListener('click', function () {
     if (state.busy || state.resendIn > 0) return;
-    run(function () { return sendCode(true); });
+    run(function () { return sendCode(true); }, true);
   });
   change.addEventListener('click', function () {
     win.clearTimeout(countdown);

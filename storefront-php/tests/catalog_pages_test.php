@@ -305,7 +305,7 @@ $t->test('productHref and catalogLink: encodeURIComponent and URLSearchParams sp
 
 $t->test('header and footer links all resolve: built routes (the bag icon goes to /bag), anchors', function () use ($t, $get): void {
     $app = Helpers::app();
-    $built = ['/', '/soon', '/login', '/signup', '/forgot-password', '/verify-email', '/account', '/account/orders', '/account/addresses', '/account/help', '/wishlist', '/search', '/new-arrivals', '/product', '/bag', '/checkout', '/privacy', '/cookie-policy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
+    $built = ['/', '/soon', '/login', '/signup', '/forgot-password', '/account-help', '/verify-email', '/account', '/account/orders', '/account/addresses', '/account/help', '/wishlist', '/search', '/new-arrivals', '/product', '/bag', '/checkout', '/privacy', '/cookie-policy', '/terms', '/refund-policy', '/shipping-policy', '/contact'];
     $checked = [];
     foreach (['/', '/new-arrivals', '/product?sku=MOCK-SAR-001', '/product?sku=NOPE', '/login'] as $uri) {
         $b = $get($app, $uri)->body();

@@ -9,6 +9,7 @@ use Pratyangi\Http\RateLimiter;
 use Pratyangi\Mail\MailTemplates;
 use Pratyangi\Mail\Mailer;
 use Pratyangi\Sms\SmsGateway;
+use Pratyangi\Sms\SmsHintGateway;
 use Pratyangi\Support\Clock;
 use Pratyangi\Support\Logger;
 
@@ -176,6 +177,28 @@ final class OtpService
         }
         $this->logger?->channel('auth')->info('otp verified', ['channel' => $channel, 'purpose' => $purpose, 'outcome' => 'success']);
         return $result;
+    }
+
+    /**
+     * "Forgot email or mobile?": texts a masked hint of the account's email to a verified number. Both limits are counted for every number,
+     * known or not, and the caller gives the same answer either way, so nothing says whether the number has an account.
+     */
+    public function sendEmailHint(string $mobile, Context $context): void
+    {
+        $fingerprint = Otp::fingerprint($this->pepper, 'mobile-hint', $mobile);
+        $this->limiter->consumeSubject('code_cooldown', $fingerprint, $context);
+        $this->limiter->consumeSubject('otp_mobile', $fingerprint, $context);
+        $row = $this->customers->findByMobile($mobile);
+        $email = (string) ($row['email'] ?? '');
+        if ($row === null || $row['mobile_verified_at'] === null || $email === '' || !$this->sms instanceof SmsHintGateway) {
+            return;
+        }
+        try {
+            $this->sms->sendEmailHint($mobile, Mobile::maskEmail($email));
+            $this->logger?->channel('auth')->info('email hint sent', ['mobile' => Mobile::mask($mobile), 'outcome' => 'sent']);
+        } catch (\Throwable $e) {
+            $this->logger?->warn('could not send the email hint', ['exception' => get_class($e), 'to' => Mobile::mask($mobile)]); // same answer as "no account"
+        }
     }
 
     /** True when codes can be sent through this channel (an SMS gateway for mobile, a mailer for email). */

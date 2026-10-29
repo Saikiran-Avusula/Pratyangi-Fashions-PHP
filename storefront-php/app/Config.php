@@ -97,6 +97,8 @@ final class Config
     public readonly ?string $smsSenderId;
     public readonly ?string $smsOtpTemplateId;
     public readonly string $smsOtpTemplateText;
+    public readonly ?string $smsHintTemplateId;
+    public readonly string $smsHintTemplateText;
     public readonly string $smsLogPath;
     private readonly ?string $otpPepper;
 
@@ -415,6 +417,13 @@ final class Config
             $templateText = 'Your verification code is {#var#}.';
         }
         $this->smsOtpTemplateText = $templateText;
+        $this->smsHintTemplateId = isset($v['SMS_HINT_TEMPLATE_ID']) ? (string) $v['SMS_HINT_TEMPLATE_ID'] : null;
+        $hintText = (string) ($v['SMS_HINT_TEMPLATE_TEXT'] ?? 'Your Pratyangi Fashions account email is {#var#}');
+        if (substr_count($hintText, '{#var#}') !== 1 || mb_strlen($hintText) > 300) {
+            $problems[] = 'SMS_HINT_TEMPLATE_TEXT: must contain {#var#} exactly once (it is replaced by the masked email) and be at most 300 characters';
+            $hintText = 'Your account email is {#var#}';
+        }
+        $this->smsHintTemplateText = $hintText;
         if ($smsMode === 'http' && $this->smsEnabled) {
             foreach (['SMS_API_URL', 'SMS_USERNAME', 'SMS_APIKEY', 'SMS_SENDER_ID', 'SMS_OTP_TEMPLATE_ID'] as $name) {
                 if (!isset($v[$name])) {

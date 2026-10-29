@@ -184,7 +184,7 @@ final class App
         $sms = null;
         if ($config->otpPepper() !== null) {
             $sms = $config->smsMode === 'http'
-                ? new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId, (string) $config->smsOtpTemplateId, $config->smsOtpTemplateText)
+                ? new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId, (string) $config->smsOtpTemplateId, $config->smsOtpTemplateText, 10, null, $config->smsHintTemplateId, $config->smsHintTemplateText)
                 : new LogSmsGateway($config->smsLogPath, $clock);
         }
 
@@ -208,7 +208,11 @@ final class App
         try {
             $response = $this->dispatch($request, $context);
         } catch (ApiException $e) {
-            $response = Response::fromException($e);
+            $body = $e->body();
+            if ($e->status === 429 && isset($context->headers['Retry-After'])) {
+                $body['retryAfter'] = (int) $context->headers['Retry-After']; // same seconds as the header, for the countdown
+            }
+            $response = Response::json($body, $e->status);
         } catch (\Throwable $e) {
             $this->logger->channel('error')->exception('unhandled error: ' . $e->getMessage(), $e);
             $response = Response::json(['message' => ApiException::GENERIC_500], 500);
@@ -361,6 +365,8 @@ final class App
                 return $this->authPages->forgot($request);
             case '/verify-email':
                 return $this->authPages->verify($request);
+            case '/account-help':
+                return $this->authPages->help($request);
             case '/bag':
                 return $this->shopPages->bag($request);
             case '/checkout':
@@ -405,7 +411,8 @@ final class App
         $r->add('POST', '/auth/otp/verify', $sms(fn (Request $q, Context $c): Response => $auth()->otpVerify($q, $c)), 'otp_verify');
         $r->add('POST', '/auth/otp/signup/request', $sms(fn (Request $q, Context $c): Response => $auth()->otpRequest($q, $c, 'signup')), 'otp_ip');
         $r->add('POST', '/auth/otp/signup/verify', $sms(fn (Request $q, Context $c): Response => $auth()->otpVerify($q, $c, 'signup')), 'otp_verify');
-        $r->add('POST', '/auth/logout', fn (Request $q, Context $c): Response => $auth()->logout($q, $c));
+        $r->add('POST', '/auth/account-help/sms', $sms(fn (Request $q, Context $c): Response => $auth()->helpSms($q, $c)), 'otp_ip');
+        $r->add('POST', '/auth/logout',fn (Request $q, Context $c): Response => $auth()->logout($q, $c));
         $r->add('GET', '/auth/me', fn (Request $q, Context $c): Response => $auth()->me($q, $c));
         // email verification: {token} is the old link (no sign-in needed), {code} is the 6-digit code of the signed-in customer; resend sends a code
         $r->add('POST', '/auth/email/verify', fn (Request $q, Context $c): Response => $auth()->verifyEmail($q, $c), 'verify');

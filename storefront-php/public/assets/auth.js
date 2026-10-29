@@ -147,6 +147,7 @@
         if (!response.ok) {
           var failure = new AuthError(data.message != null ? data.message : GENERIC, data.field, data.errors, data.code);
           failure.status = response.status;
+          failure.retryAfter = data.retryAfter || parseInt(response.headers.get('Retry-After') || '', 10) || 0;
           throw failure;
         }
         return data;
@@ -209,7 +210,7 @@
 
   /** The red alert and the notice at the top of a form (alert first). */
   function showTop(form, alertText, noticeText) {
-    qsa('p.neurva_alert, p.neurva_notice', form).forEach(function (p) { if (p.parentNode === form) form.removeChild(p); });
+    qsa('p.neurva_alert:not(.pf_lock), p.neurva_notice:not(.pf_lock)', form).forEach(function (p) { if (p.parentNode === form) form.removeChild(p); });
     var anchor = form.firstChild;
     if (noticeText) {
       var n = make('p', 'neurva_notice');
@@ -227,7 +228,7 @@
 
   /** A submit button in its idle or busy look (spinner + busy text, disabled). */
   function paintButton(button, busy, idleText, busyText) {
-    button.disabled = busy;
+    button.disabled = busy || button.hasAttribute('data-pf-locked');
     button.textContent = '';
     if (busy) {
       var spinner = make('span', 'neurva_spinner');
@@ -237,6 +238,55 @@
     } else {
       button.textContent = idleText;
     }
+  }
+
+  /* ------------------------------------------------------------------ rate-limit wait (HTTP 429), shared by every form */
+
+  /** Seconds as "2:45". */
+  function clock(seconds) { return Math.floor(seconds / 60) + ':' + (seconds % 60 < 10 ? '0' : '') + (seconds % 60); }
+  /** The end time of a wait, kept per page in sessionStorage so a reload carries on. Read with no value, clear with 0. */
+  function waitEnd(key, value) {
+    try {
+      if (value === undefined) return Number(win.sessionStorage.getItem(key)) || 0;
+      if (value) win.sessionStorage.setItem(key, String(value)); else win.sessionStorage.removeItem(key);
+    } catch (e) { /* storage blocked: the wait still counts down, it just does not survive a reload */ }
+    return 0;
+  }
+  /**
+   * Holds the buttons off after a 429 and shows "Too many attempts. Try again in 2:45" counting down (aria-live polite), then "You can try
+   * again now" and the buttons back. `host()` is the form the line goes into now; `buttons()` the submit buttons to hold. A wait still
+   * running after a reload resumes at once. start(seconds) begins a wait.
+   */
+  function rateLock(key, host, buttons) {
+    var timer = 0;
+    var line = make('p', 'neurva_alert pf_lock');
+    line.setAttribute('aria-live', 'polite');
+    function hold(on) {
+      buttons().forEach(function (b) {
+        if (!b) return;
+        if (on) b.setAttribute('data-pf-locked', ''); else b.removeAttribute('data-pf-locked');
+        b.disabled = on;
+      });
+    }
+    function tick() {
+      var left = Math.ceil((waitEnd(key) - Date.now()) / 1000);
+      var form = host();
+      if (left > 0) {
+        line.className = 'neurva_alert pf_lock';
+        line.textContent = 'Too many attempts. Try again in ' + clock(left);
+        if (form && line.parentNode !== form) form.insertBefore(line, form.firstChild);
+        hold(true);
+        timer = win.setTimeout(tick, 1000);
+      } else if (line.textContent) {
+        waitEnd(key, 0);
+        hold(false);
+        line.className = 'neurva_notice pf_lock';
+        line.textContent = 'You can try again now';
+        if (form && line.parentNode !== form) form.insertBefore(line, form.firstChild);
+      }
+    }
+    tick();
+    return { start: function (seconds) { win.clearTimeout(timer); waitEnd(key, Date.now() + seconds * 1000); tick(); } };
   }
 
   function focusFirstInvalid(form) {
@@ -382,6 +432,7 @@
         alertP.appendChild(set);
       }
     }
+    var lock = rateLock('pf_lock:login', function () { return form; }, function () { return [submitButton]; });
     function setBusy(busy) {
       state.busy = busy;
       paintButton(submitButton, busy, 'Sign In', 'Signing in…');
@@ -395,6 +446,7 @@
         var d = describeError(error);
         state.errors = { email: d.errors.email, password: d.errors.password };
         state.google = !!(error && error.code === 'google_account');
+        if (error && error.status === 429) { lock.start(error.retryAfter || 60); return; }
         // a message that belongs to an input is shown at that input; everything else at the top of the form
         if (!d.errors.email && !d.errors.password) state.formError = d.message;
         paintAll();
@@ -468,6 +520,7 @@
       paintTerms();
       showTop(form, state.formError, state.notice);
     }
+    var lock = rateLock('pf_lock:signup', function () { return form; }, function () { return [submitButton]; });
     function setBusy(busy) {
       paintButton(submitButton, busy, 'Create Account', 'Creating your account…');
     }
@@ -479,6 +532,7 @@
       return task().catch(function (error) {
         var d = describeError(error);
         state.errors = { name: d.errors.name, email: d.errors.email, password: d.errors.password };
+        if (error && error.status === 429) { lock.start(error.retryAfter || 60); return; }
         if (!d.errors.name && !d.errors.email && !d.errors.password) state.formError = d.message;
         paintAll();
       }).then(function () { setBusy(false); });
@@ -540,8 +594,8 @@
     var state = { busy: false, resendIn: 0 };
     var timer = 0;
     function paintResend() {
-      resend.disabled = state.resendIn > 0 || state.busy;
-      resend.textContent = state.resendIn > 0 ? 'Resend code in ' + state.resendIn + 's' : 'Resend code';
+      resend.disabled = state.resendIn > 0 || state.busy || resend.hasAttribute('data-pf-locked');
+      resend.textContent = state.resendIn > 0 ? 'Resend in ' + clock(state.resendIn) : 'Resend code';
     }
     function countdown(seconds) {
       win.clearTimeout(timer);
@@ -551,10 +605,15 @@
         if (state.resendIn > 0) timer = win.setTimeout(function () { state.resendIn -= 1; tick(); }, 1000);
       })();
     }
-    function fail(error) {
+    var lock = rateLock('pf_lock:verify', function () { return form; }, function () { return [submit, resend]; });
+    function fail(error, resending) {
       var d = describeError(error);
+      if (error && error.status === 429) {
+        // asking for a code too soon only holds the resend link; a limit on tries holds the whole form
+        if (resending) { showTop(form, d.message, ''); countdown(error.retryAfter || 45); } else lock.start(error.retryAfter || 60);
+        return;
+      }
       if (d.errors.code || (error && error.status === 400)) showField(code, d.message, ''); else showTop(form, d.message, '');
-      if (error && error.status === 429) countdown(45);
     }
     code.input.addEventListener('input', function () { showField(code, '', ''); });
     form.addEventListener('submit', function (event) {
@@ -576,7 +635,7 @@
       paintResend();
       showTop(form, '', '');
       call('/auth/email/resend', { method: 'POST', body: {} })
-        .then(function (data) { box.clear(); showTop(form, '', data.message); countdown(data.resendAfter || 45); }, function (error) { fail(error); })
+        .then(function (data) { box.clear(); showTop(form, '', data.message); countdown(data.resendAfter || 45); }, function (error) { fail(error, true); })
         .then(function () { state.busy = false; paintResend(); });
     });
     skip.addEventListener('click', function () { win.clearTimeout(timer); finish(user, true); });
@@ -602,6 +661,9 @@
     var resetNodes = null;
     var reset = null; // the second step, built the first time it is shown
     var countdown = 0;
+    var lock = rateLock('pf_lock:forgot', function () { return state.step === 'reset' && reset ? reset.form : firstForm(); }, function () {
+      return [firstSubmit(), reset && reset.submit, reset && reset.resend];
+    });
 
     function firstForm() { return state.channel === 'mobile' ? mobileForm : emailForm; }
     function firstSubmit() { return qs('button[type="submit"]', firstForm()); }
@@ -616,8 +678,8 @@
 
     function paintResend() {
       if (!reset) return;
-      reset.resend.disabled = state.resendIn > 0 || state.busy;
-      reset.resend.textContent = state.resendIn > 0 ? 'Resend code in ' + state.resendIn + 's' : 'Resend code';
+      reset.resend.disabled = state.resendIn > 0 || state.busy || reset.resend.hasAttribute('data-pf-locked');
+      reset.resend.textContent = state.resendIn > 0 ? 'Resend in ' + clock(state.resendIn) : 'Resend code';
     }
     function startCountdown(seconds) {
       win.clearTimeout(countdown);
@@ -653,10 +715,14 @@
       return task().catch(function (error) {
         var d = describeError(error);
         state.errors = { email: d.errors.email, mobile: d.errors.mobile, code: d.errors.code, password: d.errors.password };
-        if (error && error.status === 429 && state.step === 'reset') startCountdown(45);
+        if (error && error.status === 429) {
+          // the resend link asking too soon only holds that link; every other 429 holds the form
+          if (state.step === 'reset' && state.resending) { state.formError = d.message; startCountdown(error.retryAfter || 45); paintAll(); } else lock.start(error.retryAfter || 60);
+          return;
+        }
         if (!d.errors.email && !d.errors.mobile && !d.errors.code && !d.errors.password) state.formError = d.message;
         paintAll();
-      }).then(function () { setBusy(false); });
+      }).then(function () { state.resending = false; setBusy(false); });
     }
 
     function showStep(step) {
@@ -708,7 +774,7 @@
         paintAll();
         setBusy(state.busy);
       });
-      reset.resend.addEventListener('click', function () { sendCode(); });
+      reset.resend.addEventListener('click', function () { state.resending = true; sendCode(); });
       form.addEventListener('submit', function (event) {
         event.preventDefault();
         var code = reset.code.input.value;
@@ -801,7 +867,7 @@
   win.pfAuth = {
     qs: qs, qsa: qsa, call: call, AuthError: AuthError, describeError: describeError, fieldIn: fieldIn, showField: showField, showTop: showTop,
     paintButton: paintButton, focusFirstInvalid: focusFirstInvalid, initOtp: initOtp, finish: finish, template: template, card: card, page: page,
-    normaliseMobile: normaliseMobile, validateMobile: validateMobile, validateCode: validateCode, masked: masked
+    normaliseMobile: normaliseMobile, validateMobile: validateMobile, validateCode: validateCode, masked: masked, clock: clock, rateLock: rateLock
   };
 
   /* ------------------------------------------------------------------ Continue with Google (login and signup; the block exists only when GOOGLE_CLIENT_ID is set) */
@@ -840,8 +906,39 @@
     doc.head.appendChild(script);
   }
 
+  /* ------------------------------------------------------------------ /account-help (the mobile form exists only while SMS_ENABLED=true) */
+
+  function initHelp() {
+    var form = qs('[data-pf="help-form"]', card);
+    if (!form) return;
+    var mobile = fieldIn(form, 'help-mobile');
+    var submit = qs('button[type="submit"]', form);
+    var result = qs('[data-pf="help-result"]', form);
+    var busy = false;
+    var lock = rateLock('pf_lock:help', function () { return form; }, function () { return [submit]; });
+    mobile.input.addEventListener('input', function () { showField(mobile, '', ''); });
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      if (busy) return;
+      var problem = validateMobile(mobile.input.value);
+      showField(mobile, problem, '');
+      result.hidden = true;
+      if (problem) { focusFirstInvalid(form); return; }
+      busy = true;
+      paintButton(submit, true, 'Text me a hint', 'Sending…');
+      call('/auth/account-help/sms', { method: 'POST', body: { mobile: normaliseMobile(mobile.input.value) } })
+        .then(function (data) { result.textContent = data.message; result.hidden = false; },
+          function (error) {
+            if (error && error.status === 429) lock.start(error.retryAfter || 60);
+            else { var d = describeError(error); showField(mobile, d.errors.mobile || d.message, ''); }
+          })
+        .then(function () { busy = false; paintButton(submit, false, 'Text me a hint', ''); });
+    });
+  }
+
   entrances();
-  if (page === 'login' || page === 'signup') initGoogle();
+  if (page === 'login' || page === 'signup' || page === 'help') initGoogle();
+  if (page === 'help') initHelp();
   if (page === 'login') initLogin();
   else if (page === 'signup') initSignup();
   else if (page === 'forgot') initForgot();

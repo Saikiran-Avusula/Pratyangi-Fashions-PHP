@@ -162,4 +162,33 @@ $t->test('SMS_ENABLED=false: the number routes answer 503 and send nothing', fun
     $t->same($before, is_file($smsFile) ? filesize($smsFile) : 0);
 });
 
+$t->test('account help: a verified number gets the masked email hint; every other number gets the same answer and no SMS; the limit gives retryAfter', function () use ($t, $pdo, $clock, $smsFile, &$app, $build, $origin, &$logged): void {
+    $app = $build(true);
+    $pdo->exec("UPDATE shop_customers SET mobile = '+919811111111', mobile_verified_at = NOW(3) WHERE email = 'consent.a@example.com'");
+    $pdo->exec("INSERT INTO shop_customers (name, email, mobile, mobile_verified_at, password_hash, created_at, updated_at) VALUES ('', NULL, '+919822222222', NOW(3), NULL, NOW(3), NOW(3))");
+    $ask = static function (string $mobile) use (&$app, $origin) { // by reference: the last step swaps $app
+        return $app->handle(Helpers::request('POST', '/api/v1/auth/account-help/sms', $origin, ['mobile' => $mobile], '203.0.113.30'));
+    };
+    $size = static fn (): int => is_file($smsFile) ? (int) filesize($smsFile) : 0;
+    $known = $ask('9811111111');
+    $afterKnown = $size();
+    $t->same(200, $known->status(), $known->body());
+    $t->contains('email_hint=c*****.a@example.com', (string) file_get_contents($smsFile));
+    $unknown = $ask('9833333333');
+    $noEmail = $ask('9822222222');
+    $t->same([$known->body(), $known->body()], [$unknown->body(), $noEmail->body()], 'one answer for every number');
+    $t->same("If this number has an account, we've sent an SMS.", $known->decoded()['message']);
+    $t->same($afterKnown, $size(), 'nothing was sent for an unknown number or an account with no email');
+    $again = $ask('9811111111');
+    $t->same(429, $again->status());
+    $t->ok(($again->decoded()['retryAfter'] ?? 0) >= 1 && (int) $again->header('Retry-After') === $again->decoded()['retryAfter'], 'the wait is in the JSON and the header');
+    $t->same(422, $ask('abc')->status(), 'a malformed number is refused');
+    $app = $build(false);
+    $off = $ask('9811111111');
+    $t->same(503, $off->status(), 'SMS_ENABLED=false: the route is off ' . $off->body());
+    foreach ($logged as $line) {
+        $t->ok(!str_contains($line, '9811111111') && !str_contains($line, 'consent.a@example.com'), 'no full number or email in the log');
+    }
+});
+
 exit($t->finish());

@@ -342,4 +342,10 @@ $t->test('the answer of the request route does not depend on an account: no look
     }
 });
 
+$t->test('masked email hint: first letter, five stars, last two before the @, then the domain', function () use ($t): void {
+    $t->same('j*****an@gmail.com',\Pratyangi\Auth\Mobile::maskEmail('jonathan@gmail.com'));
+    $t->same('a*****@x.in', \Pratyangi\Auth\Mobile::maskEmail('ab@x.in'), 'a short name shows only its first letter');
+    $t->same('a*****bc@x.in', \Pratyangi\Auth\Mobile::maskEmail('a.abc@x.in'));
+});
+
 exit($t->finish());

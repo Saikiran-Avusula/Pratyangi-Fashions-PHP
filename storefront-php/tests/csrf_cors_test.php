@@ -118,8 +118,10 @@ $t->test('rate limit through the app: draft-6 headers, 429 text, Retry-After', f
     $t->same('0', $two->header('RateLimit-Remaining'));
     $three = $app->handle(Helpers::request('GET', '/api/v1/catalog/products'));
     $t->same(429, $three->status());
-    $t->same('{"message":"Too many attempts. Please wait a few minutes and try again."}', $three->body());
+    $t->same('Too many attempts. Please wait a few minutes and try again.', $three->decoded()['message'] ?? null);
     $t->ok($three->header('Retry-After') !== null);
+    $t->same((int) $three->header('Retry-After'), $three->decoded()['retryAfter'] ?? null, 'the JSON carries the same wait as the header');
+    $t->ok(($three->decoded()['retryAfter'] ?? 0) >= 1 && ($three->decoded()['retryAfter'] ?? 61) <= 60);
     $other = $app->handle(Helpers::request('GET', '/api/v1/catalog/products', [], null, '198.51.100.7'));
     $t->same(200, $other->status(), 'another address has its own bucket');
 });

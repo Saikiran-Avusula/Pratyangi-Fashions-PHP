@@ -53,6 +53,14 @@ final class AuthPages
             View::render('auth/forgot', ['query' => $query, 'smsEnabled' => $this->smsEnabled]), View::render('auth/forgot_templates', ['query' => $query]), $this->account($request->cookie(self::COOKIE)));
     }
 
+    /** GET /account-help ("Forgot email or mobile?"): hints on finding the account; the SMS form only while SMS_ENABLED=true. */
+    public function help(Request $request): Response
+    {
+        return $this->page($request, 'help', 'Forgot email or mobile? | Pratyangi Fashions',
+            'Find the email or mobile number you used for your Pratyangi Fashions account.',
+            View::render('auth/help', ['smsEnabled' => $this->smsEnabled, 'googleClientId' => $this->googleClientId]), '', $this->account($request->cookie(self::COOKIE)));
+    }
+
     public function verify(Request $request): Response
     {
         $token = self::first($request, 'token');
