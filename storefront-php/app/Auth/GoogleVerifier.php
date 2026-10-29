@@ -97,7 +97,7 @@ final class GoogleVerifier
             throw new ApiException(401, self::UNVERIFIED_EMAIL);
         }
         $name = is_string($claims['name'] ?? null) ? trim($claims['name']) : '';
-        $picture = is_string($claims['picture'] ?? null) && str_starts_with($claims['picture'], 'https://') && strlen($claims['picture']) <= 500 ? $claims['picture'] : null;
+        $picture = PublicCustomer::safePicture($claims['picture'] ?? null);
         return ['sub' => $sub, 'email' => strtolower($email), 'name' => $name, 'picture' => $picture];
     }
 

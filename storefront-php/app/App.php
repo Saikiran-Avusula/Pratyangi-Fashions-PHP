@@ -70,7 +70,7 @@ final class App
 {
     private const SECURITY_HEADERS = [
         // what Node's helmet() sends by default
-        'Content-Security-Policy' => "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data:;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
+        'Content-Security-Policy' => "default-src 'self';base-uri 'self';font-src 'self' https: data:;form-action 'self';frame-ancestors 'self';img-src 'self' data: https://*.googleusercontent.com;object-src 'none';script-src 'self';script-src-attr 'none';style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests",
         'Cross-Origin-Opener-Policy' => 'same-origin',
         'Cross-Origin-Resource-Policy' => 'same-origin',
         'Origin-Agent-Cluster' => '?1',
@@ -140,7 +140,7 @@ final class App
         ProductImage::init($config->erpMode === 'http' ? $config->erpBaseUrl : null);
         // product pictures are loaded from the ERP's own address, so only that address is added to img-src
         $origin = ProductImage::origin();
-        $this->csp = $origin === null ? self::SECURITY_HEADERS['Content-Security-Policy'] : str_replace("img-src 'self' data:", "img-src 'self' data: " . $origin, self::SECURITY_HEADERS['Content-Security-Policy']);
+        $this->csp = $origin === null ? self::SECURITY_HEADERS['Content-Security-Policy'] : str_replace("img-src 'self' data: https://*.googleusercontent.com", "img-src 'self' data: https://*.googleusercontent.com " . $origin, self::SECURITY_HEADERS['Content-Security-Policy']);
         if ($config->googleClientId !== null) {
             // Google Identity Services: its script, its button frame and its calls (and, below, a sign-in popup that keeps its opener)
             $this->csp = str_replace(["script-src 'self'", 'upgrade-insecure-requests'], ["script-src 'self' https://accounts.google.com/gsi/client", "frame-src https://accounts.google.com/gsi/;connect-src 'self' https://accounts.google.com/gsi/;upgrade-insecure-requests"], $this->csp);

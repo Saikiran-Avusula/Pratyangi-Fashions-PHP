@@ -397,16 +397,17 @@ $t->test('purpose and channel separation: a code only works for the purpose, cha
     $t->ok($a !== $b && $a !== $c && $b !== $c);
 });
 
-$t->test('no login, reset or merge with an identifier that was only typed: an unverified email gets no reset code', function () use ($t, $call, $signup, $mailbox, $phone, $count, $row, $next): void {
+$t->test('no login, reset or merge with an identifier that was only typed: an unverified email still gets one reset code', function () use ($t, $call, $signup, $mailbox, $phone, $count, $row, $next): void {
     [, $id] = $signup('typed-only@example.com');
     $before = $mailbox->countTo('typed-only@example.com');
     $next();
     $r = $call('POST', '/auth/password/forgot', ['email' => 'typed-only@example.com']);
     $t->same(200, $r->status());
-    $t->same($before, $mailbox->countTo('typed-only@example.com'), 'no reset mail: the address was never verified');
-    $r = $call('POST', '/auth/password/reset', ['email' => 'typed-only@example.com', 'code' => '123456', 'password' => 'NewSaree2027']);
-    $t->same(400, $r->status());
-    $t->same(0, $count("SELECT COUNT(*) FROM shop_verification_codes WHERE purpose = 'reset' AND target = ?", ['typed-only@example.com']));
+    $t->same($before + 1, $mailbox->countTo('typed-only@example.com'), 'one reset mail although the address was never verified');
+    $r = $call('POST', '/auth/password/reset', ['email' => 'typed-only@example.com', 'code' => $mailbox->lastCodeTo('typed-only@example.com'), 'password' => 'NewSaree2027']);
+    $t->same(204, $r->status());
+    $t->ok($row('SELECT email_verified_at FROM shop_customers WHERE id = ?', [$id])['email_verified_at'] !== null, 'using the emailed code verifies the address');
+    $t->same(200, $call('POST', '/auth/login', ['email' => 'typed-only@example.com', 'password' => 'NewSaree2027'])->status());
     // a number nobody verified: no SMS, nothing stored
     $sms = count($phone->sent);
     $call('POST', '/auth/password/forgot', ['channel' => 'mobile', 'mobile' => '9810000040']);
@@ -484,6 +485,8 @@ $t->test('reset by email code: new password, EVERY session of the account ends, 
     $t->same(['email', $id], [$stored['channel'], (int) $stored['customer_id']]);
     $t->same(400, $call('POST', '/auth/password/reset', ['email' => 'resetter@example.com', 'code' => $wrongFor($code), 'password' => 'NewSaree2027'])->status());
     $t->same(422, $call('POST', '/auth/password/reset', ['email' => 'resetter@example.com', 'code' => $code, 'password' => 'short'])->status(), 'the new password is checked');
+    $same = $call('POST', '/auth/password/reset', ['email' => 'resetter@example.com', 'code' => $code, 'password' => 'Saree2026']);
+    $t->same([422, 'password', 'Your new password must be different from your current password.'], [$same->status(), $same->decoded()['field'] ?? null, $same->decoded()['message'] ?? null], 'same as the current password, code still usable');
     $r = $call('POST', '/auth/password/reset', ['email' => 'resetter@example.com', 'code' => $code, 'password' => 'NewSaree2027']);
     $t->same(204, $r->status());
     $t->same(0, $count('SELECT COUNT(*) FROM shop_sessions WHERE customer_id = ?', [$id]), 'all sessions deleted');

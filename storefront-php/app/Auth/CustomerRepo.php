@@ -179,7 +179,7 @@ final class CustomerRepo
 
     public function setPicture(int $id, string $url): void
     {
-        $this->pdo->prepare('UPDATE shop_customers SET picture_url = ? WHERE id = ? AND picture_url IS NULL')->execute([$url, $id]);
+        $this->pdo->prepare('UPDATE shop_customers SET picture_url = ? WHERE id = ?')->execute([$url, $id]);
     }
 
     public function clearPassword(int $id): void

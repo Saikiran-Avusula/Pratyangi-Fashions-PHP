@@ -892,6 +892,15 @@
   }
 
   // A picture the ERP cannot serve shows the placeholder, on every page (the picture paths all sit under /uploads/products/).
+  // A Google avatar that cannot load is removed: the initial letter under it shows (the current look).
+  function avatarFallback() {
+    qsa('img[data-pf="avatar-img"]').forEach(function (img) {
+      var drop = function () { if (img.parentNode) img.parentNode.removeChild(img); };
+      img.addEventListener('error', drop);
+      if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) drop();
+    });
+  }
+
   function pictureFallback() {
     function swap(img) {
       if (img.src.indexOf('/uploads/products/') !== -1 && !img.hasAttribute('data-pf-fallback')) {
@@ -1003,6 +1012,7 @@
     var tab = qs('.pnvDaq_navActive');
     if (tab && tab.scrollIntoView) tab.scrollIntoView({ inline: 'center', block: 'nearest' });
     pictureFallback();
+    avatarFallback();
     retry();
     initHeader();
     categories();

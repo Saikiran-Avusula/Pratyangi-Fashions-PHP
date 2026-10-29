@@ -46,6 +46,15 @@ $t->test('a code mail is delivered with the login, sender, recipient, subject an
     $t->contains('Subject: ' . $mail['subject'], $got[0]['data']);
 });
 
+$t->test('Reply-To is the shop support address, From stays the sender', function () use ($t, $port, $messages): void {
+    \Pratyangi\Views\ShopInfo::init(Helpers::config(['SHOP_SUPPORT_EMAIL' => 'info@example.test']));
+    $before = count($messages());
+    (new SmtpMailer('127.0.0.1', $port, 'none', 'u', 'pw', 'Shop <no-reply@example.test>', 5))->send('asha@example.test', 's', 't');
+    $got = $messages()[$before];
+    $t->contains('Reply-To: info@example.test', $got['data']);
+    $t->contains('no-reply@example.test', $got['from']);
+});
+
 $t->test('the logo and icons travel inside the message (cid image parts), and no {placeholder} is left in any email', function () use ($t, $port, $messages): void {
     \Pratyangi\Views\ShopInfo::init(Helpers::config(['WEB_ORIGIN' => 'http://localhost:8080', 'SHOP_SOCIAL_INSTAGRAM' => 'https://instagram.example.test/shop']));
     $mail = MailTemplates::code('email_verify', '482913', 10, 'Asha Rao');

@@ -443,4 +443,33 @@ $t->test('first-order contact rule: SMS_ENABLED=true needs a verified mobile, SM
     $t->same([403, 'mobile-required'], [$r->status(), $r->decoded()['code'] ?? null], 'on: B (no verified mobile) may not');
 });
 
+$t->test('ORDER_OTP on POST /payments/razorpay/order: cod and off never ask; always and new_number ask until the number has its proof', function () use ($t, $settings, $pdo, $erp, $keyId, $logger, $clock, $start, $newKey, $cookieA, $addrA, $custA, $post): void {
+    $gateway = new class implements Pratyangi\Sms\SmsGateway {
+        public function sendOtp(string $mobile, string $code): void
+        {
+        }
+    };
+    $appFor = static fn (string $mode): App => new App(
+        Helpers::config($settings + ['ORDER_OTP' => $mode, 'SMS_ENABLED' => 'true', 'SMS_MODE' => 'log', 'SMS_LOG_PATH' => sys_get_temp_dir() . '/pf_order_otp_unused.log', 'OTP_PEPPER' => str_repeat('P', 48)]),
+        $logger, $clock, static fn (): \PDO => $pdo, new NullMailer(),
+        new ErpClient($erp->baseUrl(), FakeErp::KEY, null, 'offer-else-retail', 'exclusive', 500, null, $logger, FakeErp::ORDER_KEY),
+        new DbRateLimitStore(static fn (): \PDO => $pdo), ['payment_order' => 100000, 'payment_verify' => 100000], null, $gateway, new FakeRazorpay(),
+    );
+    $pdo->prepare('DELETE FROM shop_verified_numbers WHERE customer_id = ?')->execute([$custA]);
+    foreach (['off', 'cod'] as $mode) {
+        $r = $start($cookieA, $newKey(), $addrA, null, $appFor($mode));
+        $t->same(201, $r->status(), $mode . ' does not ask for a code on an online payment');
+    }
+    foreach (['always', 'new_number'] as $mode) {
+        $r = $start($cookieA, $newKey(), $addrA, null, $appFor($mode));
+        $t->same([422, 'otp-required', 'phone'], [$r->status(), $r->decoded()['code'] ?? null, $r->decoded()['field'] ?? null], $mode . ' asks for a code');
+    }
+    // the delivery number (9876543210) is proven: both modes let the order through
+    $pdo->prepare('INSERT INTO shop_verified_numbers (customer_id, mobile, verified_at, otp_passed_at) VALUES (?, ?, ?, ?)')->execute([$custA, '9876543210', gmdate('Y-m-d H:i:s', (int) $clock->now()), gmdate('Y-m-d H:i:s', (int) $clock->now())]);
+    foreach (['always', 'new_number'] as $mode) {
+        $r = $start($cookieA, $newKey(), $addrA, null, $appFor($mode));
+        $t->same(201, $r->status(), $mode . ' lets a proven number through');
+    }
+});
+
 exit($t->finish());

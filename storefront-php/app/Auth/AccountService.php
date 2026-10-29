@@ -147,7 +147,7 @@ final class AccountService
     /* ---------------------------------------------------------------- forgot password */
 
     /**
-     * Sends a reset code to the email or mobile number when it is the verified one stored on an account that can use it. The answer, its
+     * Sends a reset code to the email or mobile number when it is the one stored on an account that can use it. The answer, its
      * headers and the limits are the same for every target, so nothing says whether an account exists.
      */
     public function requestReset(string $channel, string $target, string $clientIp, Context $context): void
@@ -184,8 +184,15 @@ final class AccountService
             throw OtpService::invalid();
         }
         $customerId = (int) $row['id'];
-        $this->otp->consume($channel, 'reset', $target, $code, $customerId, function () use ($customerId, $password): void {
+        $this->otp->consume($channel, 'reset', $target, $code, $customerId, function () use ($channel, $customerId, $password, $row): void {
+            // inside the code check so only the real owner learns it; the throw keeps the code usable
+            if (($row['password_hash'] ?? '') !== '' && Passwords::verify((string) $row['password_hash'], $password)) {
+                throw ApiException::validation(['password' => 'Your new password must be different from your current password.']);
+            }
             $this->customers->setPassword($customerId, Passwords::hash($password));
+            if ($channel === 'email') {
+                $this->customers->markVerified($customerId, $this->clock->now());
+            }
             $this->sessions->deleteAllFor($customerId);
             $this->otp->endResetCodes($customerId);
         });
@@ -213,7 +220,8 @@ final class AccountService
             return $hasPassword || (string) ($row['email'] ?? '') !== '' ? $row : null;
         }
         $row = $this->customers->findByEmail($target);
-        return $row !== null && $row['email_verified_at'] !== null ? $row : null;
+        // an unverified email is fine: signup no longer verifies, and using the emailed code proves the address (see reset())
+        return $row;
     }
 
     private function requireSmsFor(string $channel): void

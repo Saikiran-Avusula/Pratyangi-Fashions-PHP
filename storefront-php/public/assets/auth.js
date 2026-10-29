@@ -349,7 +349,7 @@
     var emailLabel = qs('label', email.wrap);
     var mailIcon = iconHolder.firstChild.cloneNode(true);
     var mobileIcon = template('icon-mobile').firstChild;
-    var state = { touched: false, busy: false, errors: {}, formError: '', notice: '', unknown: false };
+    var state = { touched: false, busy: false, errors: {}, formError: '', notice: '', google: false };
     var shownKind = 'empty';
     var signupLink = qs('.neurva_switch a', card); // "Create an account", with ?next= kept
 
@@ -367,20 +367,20 @@
       // no email error while typing: it shows after leaving the box (or on submit); a mobile value only ever gets the notice
       var blurError = value.trim() && state.touched && !isMobile ? validateIdentifier(value) : '';
       showField(email, state.errors.email || blurError || '', isMobile ? MOBILE_UNAVAILABLE : '', 'status');
-      if (state.unknown && state.errors.email && signupLink) {
-        // only reached for a 404 account_not_found, which sign-in no longer sends (it answers 401 invalid_credentials for unknown and wrong alike)
-        var holder = qs('p.neurva_error', email.slot || email.wrap);
-        var link = make('a', 'neurva_inlineLink');
-        link.href = signupLink.getAttribute('href');
-        link.textContent = 'Create account';
-        holder.appendChild(doc.createTextNode(' '));
-        holder.appendChild(link);
-      }
     }
     function paintAll() {
       paintEmail();
       showField(password, state.errors.password || '', '');
       showTop(form, state.formError, state.notice);
+      var alertP = qs('p.neurva_alert', form);
+      if (state.google && alertP) {
+        // the Google button is above the form; the other way in is a password set by email code
+        var set = make('a', 'neurva_inlineLink');
+        set.href = '/forgot-password';
+        set.textContent = 'Set a password';
+        alertP.appendChild(doc.createTextNode('. Use the Google button, or '));
+        alertP.appendChild(set);
+      }
     }
     function setBusy(busy) {
       state.busy = busy;
@@ -394,7 +394,7 @@
       return task().catch(function (error) {
         var d = describeError(error);
         state.errors = { email: d.errors.email, password: d.errors.password };
-        state.unknown = !!(error && error.code === 'account_not_found');
+        state.google = !!(error && error.code === 'google_account');
         // a message that belongs to an input is shown at that input; everything else at the top of the form
         if (!d.errors.email && !d.errors.password) state.formError = d.message;
         paintAll();
@@ -403,7 +403,7 @@
 
     email.input.addEventListener('input', function () {
       state.touched = false;
-      state.unknown = false;
+      state.google = false;
       state.errors.email = undefined;
       paintEmail();
     });

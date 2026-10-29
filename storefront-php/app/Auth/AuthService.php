@@ -146,10 +146,11 @@ final class AuthService
                     }
                     $created = true;
                 }
-                if ($g['picture'] !== null) {
-                    $this->customers->setPicture($id, $g['picture']);
-                }
                 $row = $this->customers->findById($id);
+            }
+            if ($row !== null && $g['picture'] !== null && $g['picture'] !== ($row['picture_url'] ?? null)) {
+                $this->customers->setPicture((int) $row['id'], $g['picture']); // refreshed on every Google sign-in
+                $row = $this->customers->findById((int) $row['id']);
             }
             $this->pdo->commit();
         } catch (\Throwable $e) {

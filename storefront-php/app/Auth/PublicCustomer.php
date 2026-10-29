@@ -8,6 +8,17 @@ use Pratyangi\Support\Clock;
 /** The customer object the API returns everywhere. Never contains the password hash. */
 final class PublicCustomer
 {
+    /** A Google profile picture is kept only as an https address on *.googleusercontent.com; anything else is ignored. */
+    public static function safePicture(mixed $url): ?string
+    {
+        if (!is_string($url) || strlen($url) > 500 || preg_match('/[\s"<>]/', $url) === 1) {
+            return null;
+        }
+        $p = parse_url($url);
+        $host = strtolower((string) ($p['host'] ?? ''));
+        return ($p['scheme'] ?? '') === 'https' && !isset($p['user']) && !isset($p['port']) && str_ends_with($host, '.googleusercontent.com') ? $url : null;
+    }
+
     /**
      * @param array<string,mixed> $row a shop_customers row
      * @return array<string,mixed> id (string), name, email, provider, emailVerified, createdAt (ISO, ms, Z), mobile and picture when set
@@ -34,9 +45,9 @@ final class PublicCustomer
             $out['mobile'] = $mobile; // PHP-only additions: present only for an account that has a number
             $out['mobileVerified'] = ($row['mobile_verified_at'] ?? null) !== null;
         }
-        $picture = $row['picture_url'] ?? null;
-        if ($picture !== null && $picture !== '') {
-            $out['picture'] = (string) $picture;
+        $picture = self::safePicture($row['picture_url'] ?? null);
+        if ($picture !== null) {
+            $out['picture'] = $picture;
         }
         return $out;
     }

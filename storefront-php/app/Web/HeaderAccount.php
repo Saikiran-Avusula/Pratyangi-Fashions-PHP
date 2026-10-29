@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Pratyangi\Web;
 
+use Pratyangi\Views\View;
+
 /**
  * What the header shows for a signed-in person. Same rules as the web's accountLabel():
  * an email-like name shows only the part before the @, the first word is the greeting name,
@@ -20,7 +22,14 @@ final class HeaderAccount
         public readonly string $initial,
         public readonly string $full,
         public readonly string $email,
+        public readonly ?string $picture = null,
     ) {
+    }
+
+    /** The Google picture inside the initial's circle (the initial stays underneath; site.js removes a picture that fails to load). */
+    public function avatarImg(): string
+    {
+        return $this->picture === null ? '' : '<img data-pf="avatar-img" src="' . View::e($this->picture) . '" alt="' . View::e($this->first) . '" loading="lazy" referrerpolicy="no-referrer" width="34" height="34"/>';
     }
 
     /** @param array<string,mixed> $row a customer row (name, email) */
@@ -37,6 +46,6 @@ final class HeaderAccount
         if ($first !== '' && preg_match('/^./us', $first, $m) === 1) {
             $initial = function_exists('mb_strtoupper') ? mb_strtoupper($m[0], 'UTF-8') : strtoupper($m[0]);
         }
-        return new self($first, $initial, $source, (string) ($row['email'] ?? ''));
+        return new self($first, $initial, $source, (string) ($row['email'] ?? ''), \Pratyangi\Auth\PublicCustomer::safePicture($row['picture_url'] ?? null));
     }
 }

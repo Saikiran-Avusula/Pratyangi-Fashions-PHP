@@ -65,6 +65,9 @@ final class SmtpMailer implements Mailer
             }
             [$fromName, $fromAddress] = self::splitFrom($this->from);
             $mail->setFrom($fromAddress, $fromName);
+            if (ShopInfo::email() !== '') {
+                $mail->addReplyTo(ShopInfo::email());
+            }
             $mail->addAddress($to);
             $mail->Subject = $subject;
             if ($html !== null) {

@@ -119,13 +119,13 @@ $t->test('pictures: ERP base + "/" + image_path on the cards, the product page a
     $p = $app->handle(Helpers::request('GET', '/product?sku=IMG-1'))->body();
     $t->contains('src="https://erp.example.test/uploads/products/a.jpg"', $p, 'the product page');
     $csp = (string) $page->header('Content-Security-Policy');
-    $t->contains("img-src 'self' data: https://erp.example.test;", $csp, 'only the ERP address is added to img-src');
+    $t->contains("img-src 'self' data: https://*.googleusercontent.com https://erp.example.test;", $csp, 'only the ERP address is added to img-src');
     $t->contains('data-pf-image-base="https://erp.example.test"', $app->handle(Helpers::request('GET', '/bag'))->body(), 'the bag page tells the script the base');
     // without an ERP address (mock or off) nothing changes
     $mock = Helpers::app(Helpers::config(['ERP_MOCK_FILE' => $file, 'CATALOG_CACHE_SECONDS' => '0']));
     $mb = $mock->handle(Helpers::request('GET', '/new-arrivals'));
     $t->same(3, substr_count($mb->body(), 'src="/assets/images/reference/product-1.webp"'), 'mock ERP: placeholders');
-    $t->ok(str_contains((string) $mb->header('Content-Security-Policy'), "img-src 'self' data:;"), 'mock ERP: the policy is unchanged');
+    $t->ok(str_contains((string) $mb->header('Content-Security-Policy'), "img-src 'self' data: https://*.googleusercontent.com;"), 'mock ERP: the policy is unchanged');
     Helpers::app(Helpers::config()); // leaves ProductImage as it was
 });
 
