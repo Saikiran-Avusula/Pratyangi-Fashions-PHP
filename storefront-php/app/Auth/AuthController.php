@@ -213,6 +213,8 @@ final class AuthController
     public function reset(Request $request, Context $context): Response
     {
         $input = Validator::reset($request->jsonBody());
+        // after the form checks, so a rejected form does not use one of the 5 tries (the route has no bucket of its own)
+        $this->limiter?->consume('reset', $context->clientIp(), $context);
         $this->account()->reset($input['channel'], $input['target'], $input['code'], $input['password']);
         return Response::noContent();
     }

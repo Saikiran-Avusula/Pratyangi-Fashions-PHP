@@ -516,6 +516,23 @@ $t->test('reset by mobile code: works for a verified number whose email is not v
     $t->same('+919810000070', $row('SELECT mobile FROM shop_customers WHERE id = ?', [$id])['mobile']);
 });
 
+$t->test('reset limit: form errors (short, mismatch) use no attempt; only the code check counts', function () use ($t, $call, $verifiedUser, $mailbox, $next, &$app, $makeApp, $loose, $phone): void {
+    $verifiedUser('formerr@example.com');
+    $next(100);
+    $saved = $app;
+    $app = $makeApp(['reset' => 3] + $loose, $mailbox, $phone); // forgot takes 1 of the 3
+    try {
+        $call('POST', '/auth/password/forgot', ['email' => 'formerr@example.com'], '', '203.0.113.77');
+        $code = $mailbox->lastCodeTo('formerr@example.com');
+        for ($i = 0; $i < 4; $i++) {
+            $t->same(422, $call('POST', '/auth/password/reset', ['email' => 'formerr@example.com', 'code' => $code, 'password' => 'short'], '', '203.0.113.77')->status(), 'form error ' . $i);
+        }
+        $t->same(204, $call('POST', '/auth/password/reset', ['email' => 'formerr@example.com', 'code' => $code, 'password' => 'GoodSaree2027'], '', '203.0.113.77')->status(), 'the real try still has its attempts');
+    } finally {
+        $app = $saved;
+    }
+});
+
 $t->test('reset: five wrong tries lock the code; a mobile-only account without a password has nothing to reset', function () use ($t, $call, $verifiedUser, $mobileUser, $mailbox, $phone, $next, $wrongFor): void {
     $verifiedUser('locker@example.com');
     $next(100);
@@ -525,6 +542,7 @@ $t->test('reset: five wrong tries lock the code; a mobile-only account without a
         $t->same(400, $call('POST', '/auth/password/reset', ['email' => 'locker@example.com', 'code' => $wrongFor($code), 'password' => 'NewSaree2027'])->status());
     }
     $t->same(400, $call('POST', '/auth/password/reset', ['email' => 'locker@example.com', 'code' => $code, 'password' => 'NewSaree2027'])->status(), 'locked');
+    $t->same('Too many wrong codes. Request a new code.', $call('POST', '/auth/password/reset', ['email' => 'locker@example.com', 'code' => $code, 'password' => 'NewSaree2027'])->decoded()['message'], 'locked message');
     $mobileUser('9810000080');
     $next(100);
     $call('POST', '/auth/password/forgot', ['channel' => 'mobile', 'mobile' => '9810000080']);

@@ -274,10 +274,10 @@ $t->test('attempts: five wrong codes lock that code, even for the right one; fou
     $code = $lastCode();
     for ($i = 0; $i < 5; $i++) {
         $r = $verify('9800000050', $wrongFor($code));
-        $t->same([400, ['message' => 'Invalid or expired code']], [$r->status(), $r->decoded()]);
+        $t->same([400, ['message' => $i < 4 ? 'Invalid or expired code' : 'Too many wrong codes. Request a new code.']], [$r->status(), $r->decoded()], 'wrong try ' . ($i + 1));
     }
     $r = $verify('9800000050', $code);
-    $t->same([400, ['message' => 'Invalid or expired code'], []], [$r->status(), $r->decoded(), $r->cookies()], 'locked');
+    $t->same([400, ['message' => 'Too many wrong codes. Request a new code.'], []], [$r->status(), $r->decoded(), $r->cookies()], 'locked');
     $t->same(5, (int) $row('SELECT attempts FROM shop_verification_codes WHERE target = ? ORDER BY id DESC LIMIT 1', ['+919800000050'])['attempts'], 'no more than five counted');
     // a fresh code works again
     $clock->advance(46);
@@ -361,7 +361,7 @@ $t->test('an email sent along with a mobile sign-up is ignored: it never signs i
     $t->same(400, $me->status(), 'the mobile-only account has no email to confirm');
 });
 
-$t->test('every verify failure is the same refusal: unknown number, wrong code, expired, used, locked, malformed', function () use ($t, $request, $verify, $lastCode, $clock, $post, $signIn, $wrongFor): void {
+$t->test('every verify failure is the same refusal: unknown number, wrong code, expired, used, malformed', function () use ($t, $request, $verify, $lastCode, $clock, $post, $signIn, $wrongFor): void {
     $expected = [400, '{"message":"Invalid or expired code"}', []];
     $shape = static fn (\Pratyangi\Http\Response $r): array => [$r->status(), $r->body(), $r->cookies()];
     $signIn('9800000100', 'Refusal Person');
@@ -385,10 +385,7 @@ $t->test('every verify failure is the same refusal: unknown number, wrong code, 
     $clock->advance(46);
     $request('9800000100');
     $code = $lastCode();
-    for ($i = 0; $i < 5; $i++) {
-        $verify('9800000100', $wrongFor($code));
-    }
-    $results['locked'] = $shape($verify('9800000100', $code));
+    // (a locked code gets its own message, covered by the attempts test)
     foreach ($results as $note => $got) {
         $t->same($expected, $got, $note);
     }

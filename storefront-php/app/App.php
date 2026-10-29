@@ -424,7 +424,7 @@ final class App
         $r->add('POST', '/auth/email/link/verify', fn (Request $q, Context $c): Response => $auth()->emailLinkVerify($q, $c), 'otp_verify', true);
         $r->add('POST', '/auth/profile/name', fn (Request $q, Context $c): Response => $auth()->profileName($q, $c), null, true);
         $r->add('POST', '/auth/password/forgot', fn (Request $q, Context $c): Response => $auth()->forgot($q, $c), 'reset');
-        $r->add('POST', '/auth/password/reset', fn (Request $q, Context $c): Response => $auth()->reset($q, $c), 'reset');
+        $r->add('POST', '/auth/password/reset', fn (Request $q, Context $c): Response => $auth()->reset($q, $c));
         $r->add('GET', '/catalog/products', fn (Request $q, Context $c): Response => $this->catalog->products($q, $c), 'catalog');
 
         // Address book (docs/API_CONTRACT.md section 2.4)

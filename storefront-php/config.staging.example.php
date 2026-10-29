@@ -51,6 +51,9 @@ return [
     'SMS_OTP_TEMPLATE_ID' => '',
     'SMS_OTP_TEMPLATE_TEXT' => 'Your Pratyangi Fashions verification code is {#var#}. It is valid for 5 minutes.',
     'SMS_LOG_PATH' => '',
+    // "Forgot email or mobile?" texts a masked email hint (only with SMS_ENABLED true). Empty id = no hint SMS is sent (the page still answers the same).
+    'SMS_HINT_TEMPLATE_ID' => '',
+    'SMS_HINT_TEMPLATE_TEXT' => 'Your Pratyangi Fashions account email is {#var#}',
 
     // ---- e-mail (cPanel > Email Accounts: create no-reply@pratyangi.com, then use its "Connect Devices" settings) ----------------------
     'MAIL_MODE' => 'smtp',

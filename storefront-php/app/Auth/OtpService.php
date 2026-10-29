@@ -153,11 +153,13 @@ final class OtpService
         $this->pdo->beginTransaction();
         try {
             $live = $this->codes->findLiveForUpdate($channel, $purpose, $target, $customerId, $now);
-            if ($live === null || (int) $live['attempts'] >= Otp::MAX_ATTEMPTS) {
+            if ($live === null) {
                 $failure = self::invalid();
+            } elseif ((int) $live['attempts'] >= Otp::MAX_ATTEMPTS) {
+                $failure = self::locked();
             } elseif (!Otp::matchesFor($this->pepper, $channel, $purpose, $target, $code, (string) $live['code_hash'])) {
                 $this->codes->addAttempt((int) $live['id']);
-                $failure = self::invalid();
+                $failure = (int) $live['attempts'] + 1 >= Otp::MAX_ATTEMPTS ? self::locked() : self::invalid();
             } elseif (!$this->codes->consume((int) $live['id'], $now)) {
                 $failure = self::invalid(); // used by another request a moment ago
             } else {
@@ -296,6 +298,11 @@ final class OtpService
             return null;
         }
         return is_string($name) && trim($name) !== '' ? $name : null;
+    }
+
+    public static function locked(): ApiException
+    {
+        return ApiException::badRequest('Too many wrong codes. Request a new code.');
     }
 
     public static function invalid(): ApiException
