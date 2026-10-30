@@ -36,6 +36,35 @@ $t->test('with the key: PHP, extensions, database, folders, mail, ERP; a failing
     }
 });
 
+$t->test('robots.txt: STAGING=true disallows everything; otherwise allow + Sitemap; sitemap.xml lists the fixed pages on WEB_ORIGIN', function () use ($t, $get): void {
+    $r = $get(['STAGING' => 'true', 'WEB_ORIGIN' => 'https://test.pratyangi.com'], '/robots.txt');
+    $t->same([200, "User-agent: *\nDisallow: /\n"], [$r->status(), $r->body()]);
+    $t->contains('text/plain', (string) $r->header('Content-Type'));
+    $r = $get(['STAGING' => 'false', 'WEB_ORIGIN' => 'https://www.pratyangi.com'], '/robots.txt');
+    $t->same("User-agent: *\nAllow: /\nSitemap: https://www.pratyangi.com/sitemap.xml\n", $r->body());
+    $r = $get(['STAGING' => 'false', 'WEB_ORIGIN' => 'https://www.pratyangi.com'], '/sitemap.xml');
+    $t->same(200, $r->status());
+    $t->contains('application/xml', (string) $r->header('Content-Type'));
+    foreach (['<loc>https://www.pratyangi.com/</loc>', '/new-arrivals</loc>', '/contact</loc>', '/privacy</loc>', '/terms</loc>', '/refund-policy</loc>', '/shipping-policy</loc>'] as $needle) {
+        $t->contains($needle, $r->body());
+    }
+    $t->same(true, simplexml_load_string($r->body()) !== false, 'well-formed XML');
+});
+
+$t->test('/server-check shows the version from public/version.txt, or says it is not a built version', function () use ($t): void {
+    $file = dirname(__DIR__) . '/public/version.txt';
+    $t->same(false, is_file($file), 'version.txt is made by the build, never kept in the source tree');
+    $r = (require dirname(__DIR__) . '/tools/server_check.php')(Helpers::config(['SERVER_CHECK_KEY' => 'k' . str_repeat('x', 20)]), Helpers::request('GET', '/server-check?key=k' . str_repeat('x', 20)), static fn () => throw new \RuntimeException('no db'));
+    $t->same('not a built version', $r->decoded()['version']);
+    file_put_contents($file, "v3\n2026-10-30\nsummary\n");
+    try {
+        $r = (require dirname(__DIR__) . '/tools/server_check.php')(Helpers::config(['SERVER_CHECK_KEY' => 'k' . str_repeat('x', 20)]), Helpers::request('GET', '/server-check?key=k' . str_repeat('x', 20)), static fn () => throw new \RuntimeException('no db'));
+        $t->same('v3', $r->decoded()['version']);
+    } finally {
+        unlink($file);
+    }
+});
+
 $t->test('STAGING=true: every answer carries X-Robots-Tag noindex; otherwise none', function () use ($t, $get): void {
     $t->contains('noindex', (string) $get(['STAGING' => 'true'], '/privacy')->header('X-Robots-Tag'));
     $t->contains('noindex', (string) $get(['STAGING' => 'true'], '/api/v1/health')->header('X-Robots-Tag'));

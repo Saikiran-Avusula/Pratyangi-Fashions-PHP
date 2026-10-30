@@ -14,7 +14,10 @@ return static function (Config $config, Request $request, \Closure $pdo): Respon
     }
     $root = dirname(__DIR__);
     $yes = static fn (bool $ok): string => $ok ? 'ok' : 'FAIL';
-    $checks = ['php' => PHP_VERSION . ' ' . $yes(version_compare(PHP_VERSION, '8.1.0', '>='))];
+    // public/version.txt is written into the zip by tools/build_deploy.ps1: first line = version, then date and summary
+    $versionFile = $root . '/public/version.txt';
+    $checks = ['version' => is_file($versionFile) ? trim(explode("\n", (string) file_get_contents($versionFile))[0]) : 'not a built version'];
+    $checks['php'] = PHP_VERSION . ' ' . $yes(version_compare(PHP_VERSION, '8.1.0', '>='));
     foreach (['pdo_mysql', 'openssl', 'mbstring', 'json', 'curl'] as $ext) {
         $checks['ext ' . $ext] = $yes(extension_loaded($ext));
     }

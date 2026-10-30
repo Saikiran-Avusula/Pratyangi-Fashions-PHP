@@ -878,17 +878,34 @@
     var holder = qs('[data-pf="google-button"]', box);
     var problem = qs('[data-pf="google-error"]', box);
     function say(text) { problem.textContent = text; problem.hidden = !text; }
+    // from the Google answer until the page changes: a full-screen "Signing you in…" (it also stops a second tap); an error removes it and shows the message
+    var signing = null;
+    function showSigning() {
+      signing = doc.createElement('div');
+      signing.className = 'pf_signing';
+      signing.setAttribute('role', 'status');
+      var logo = qs('.pSCCwa_brandLogo img');
+      if (logo) { var img = doc.createElement('img'); img.src = logo.getAttribute('src'); img.alt = ''; signing.appendChild(img); }
+      var text = doc.createElement('p'); text.textContent = 'Signing you in…'; signing.appendChild(text);
+      var spin = doc.createElement('span'); spin.className = 'pf_spin'; signing.appendChild(spin);
+      doc.body.appendChild(signing);
+      if (win.PratyangiScroll) win.PratyangiScroll.lock();
+    }
+    function hideSigning() { if (!signing) return; signing.remove(); signing = null; if (win.PratyangiScroll) win.PratyangiScroll.unlock(); }
     var script = doc.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.onerror = function () { box.hidden = true; }; // Google cannot be reached: the email form is still there
     script.onload = function () {
       win.google.accounts.id.initialize({
+        ux_mode: 'popup', // never the redirect mode (it posts to a login_uri we do not have)
         client_id: box.getAttribute('data-client-id'),
         callback: function (response) {
+          if (signing) return;
           say('');
+          showSigning();
           call('/auth/google', { method: 'POST', body: { credential: response.credential } })
-            .then(function (data) { finish(data.user, false); }, function (error) { say(describeError(error).message); });
+            .then(function (data) { finish(data.user, false); }, function (error) { hideSigning(); say(describeError(error).message); });
         }
       });
       // Google draws a fixed-width button (200 to 400px): as wide as the card, drawn again when the card changes width

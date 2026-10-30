@@ -23,14 +23,14 @@ final class StaticFiles
     ];
 
     /** The only JavaScript files that are served (site.js: every page; auth.js: the sign-in pages; bag.js: the bag in the browser; listing.js: New Arrivals; product.js: the product page; bag-page.js: the bag and checkout pages; account.js: the account page; auth-otp.js: the mobile code form on the sign-in and sign-up pages). */
-    private const SCRIPTS = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'];
+    private const SCRIPTS = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js', 'demo.js'];
 
     public function __construct(private string $root)
     {
     }
 
     /** @param string $path request path starting with /assets/; null = not a servable file */
-    public function serve(string $path): ?Response
+    public function serve(string $path, bool $versioned = false): ?Response
     {
         $relative = rawurldecode(substr($path, strlen('/assets/')));
         if ($relative === '' || str_contains($relative, "\0") || str_contains($relative, '\\') || preg_match('#(^|/)\.{1,2}(/|$)#', $relative) === 1) {
@@ -57,8 +57,8 @@ final class StaticFiles
         if ($body === false) {
             return null;
         }
-        // scripts and styles are checked again on every visit, so a changed file is never run against an old one (pictures keep an hour)
-        $fresh = in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['js', 'css'], true);
-        return Response::raw($body, $type)->setHeader('Cache-Control', $fresh ? 'no-cache' : 'public, max-age=3600');
+        // a script or style asked for with ?v=<version> never changes under that URL: kept a year; without ?v= it is re-checked every visit (pictures keep an hour)
+        $code = in_array(strtolower(pathinfo($file, PATHINFO_EXTENSION)), ['js', 'css'], true);
+        return Response::raw($body, $type)->setHeader('Cache-Control', $code ? ($versioned ? 'public, max-age=31536000, immutable' : 'no-cache') : 'public, max-age=3600');
     }
 }

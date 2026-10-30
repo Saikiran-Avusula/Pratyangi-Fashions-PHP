@@ -73,6 +73,7 @@ final class Helpers
     {
         return new Config($override + [
             'APP_ENV' => 'test',
+            'DEMO_UI' => getenv('PF_TEST_DEMO_UI') ?: 'false', // the suite can be run with the preview screens on: PF_TEST_DEMO_UI=true
             'DB_NAME' => 'pf_unit_test',
             'DB_USER' => 'unit',
             'DB_PASS' => '',

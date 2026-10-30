@@ -25,6 +25,12 @@ final class ShopInfo
         self::$brandDir = $brandDir;
     }
 
+    /** The footer shows the payment-method row only while PAYMENTS_ENABLED=true. */
+    public static function paymentsEnabled(): bool
+    {
+        return self::$config?->paymentsEnabled ?? false;
+    }
+
     private static function brandDir(): string
     {
         return rtrim(self::$brandDir ?? dirname(__DIR__, 2) . '/public/assets/images/brand', '/') . '/';
@@ -137,6 +143,14 @@ final class ShopInfo
     }
 
     /** "Free Shipping on Orders Above ₹1,999" (Indian digit grouping), or '' when SHOP_FREE_SHIPPING_ABOVE is empty. */
+    /** The top-bar messages, one shown at a time. A shipping promise appears only when SHOP_FREE_SHIPPING_ABOVE is set. @return list<string> */
+    public static function announcements(): array
+    {
+        $list = self::$config?->shopAnnouncements ?? ['Authentic Handlooms'];
+        $free = self::freeShippingText();
+        return $free === '' ? $list : array_merge([$free], $list);
+    }
+
     public static function freeShippingText(): string
     {
         $rupees = self::$config?->shopFreeShippingAbove;

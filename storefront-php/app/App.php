@@ -56,6 +56,7 @@ use Pratyangi\Web\AuthPages;
 use Pratyangi\Web\CatalogLinks;
 use Pratyangi\Web\CatalogPages;
 use Pratyangi\Views\ShopInfo;
+use Pratyangi\Web\DemoPages;
 use Pratyangi\Web\ErrorPages;
 use Pratyangi\Web\LandingController;
 use Pratyangi\Web\PolicyPages;
@@ -96,6 +97,7 @@ final class App
     private AuthPages $authPages;
     private CatalogPages $catalogPages;
     private ShopPages $shopPages;
+    private ?DemoPages $demoPages = null; // only with DEMO_UI=true
     private PolicyPages $policyPages;
     private ?AuthController $authController = null;
     private ?OtpService $otpService = null;
@@ -126,7 +128,7 @@ final class App
         private ?GoogleVerifier $google = null, // tests give a fake; otherwise it is built from GOOGLE_CLIENT_ID
     ) {
         $this->cors = new Cors($config->webOrigins);
-        $this->csrf = new Csrf($config->webOrigins);
+        $this->csrf = new Csrf($config->webOrigins, $logger);
         $this->limiter = new RateLimiter($rateLimitStore, $clock, $logger, $rateLimitOverrides);
         $cache = new CatalogCache($catalogCacheDir ?? $config->catalogCacheDir, $config->catalogCacheSeconds, $clock, $logger);
         $catalogService = new CatalogService($erp, $cache, $logger);
@@ -136,7 +138,7 @@ final class App
         $this->landing = new LandingController($catalogService, fn (string $token): ?array => $this->auth()->customerForToken($token), $logger);
         $this->authPages = new AuthPages(fn (string $token): ?array => $this->auth()->customerForToken($token), $logger, $config->smsEnabled, $config->googleClientId);
         $this->catalogPages = new CatalogPages($catalogService, fn (string $token): ?array => $this->auth()->customerForToken($token), $logger);
-        $this->shopPages = new ShopPages($catalogService, fn (string $token): ?array => $this->auth()->customerForToken($token), $logger, fn (): AddressRepo => $this->addressRepo(), $config->smsEnabled, fn (): OrderRepo => new OrderRepo($this->pdo(), $clock));
+        $this->shopPages = new ShopPages($catalogService, fn (string $token): ?array => $this->auth()->customerForToken($token), $logger, fn (): AddressRepo => $this->addressRepo(), $config->smsEnabled, fn (): OrderRepo => new OrderRepo($this->pdo(), $clock), $config->demoUi);
         ProductImage::init($config->erpMode === 'http' ? $config->erpBaseUrl : null);
         // product pictures are loaded from the ERP's own address, so only that address is added to img-src
         $origin = ProductImage::origin();
@@ -144,6 +146,9 @@ final class App
         if ($config->googleClientId !== null) {
             // Google Identity Services: its script, its button frame and its calls (and, below, a sign-in popup that keeps its opener)
             $this->csp = str_replace(["script-src 'self'", 'upgrade-insecure-requests'], ["script-src 'self' https://accounts.google.com/gsi/client", "frame-src https://accounts.google.com/gsi/;connect-src 'self' https://accounts.google.com/gsi/;upgrade-insecure-requests"], $this->csp);
+        }
+        if ($config->demoUi) {
+            $this->demoPages = new DemoPages(fn (string $token): ?array => $this->auth()->customerForToken($token), $logger, $config->smsEnabled);
         }
         ShopInfo::init($config); // the company details of the footer, the policy pages and the emails
         $this->policyPages = new PolicyPages(fn (string $token): ?array => $this->auth()->customerForToken($token), $logger);
@@ -338,8 +343,28 @@ final class App
             // tools/server_check.php (shipped with the app) answers it; it refuses unless SERVER_CHECK_KEY is set and matches
             return (require dirname(__DIR__) . '/tools/server_check.php')($this->config, $request, fn (): \PDO => ($this->pdoFactory)());
         }
+        if ($path === '/auth' || str_starts_with($path, '/auth/')) {
+            // the sign-in calls live under /api/v1/auth; a browser that lands on /auth... (an old link, a Google hand-back) goes to the sign-in page, not a 404
+            return Response::html('', 302)->setHeader('Location', '/login')->setHeader('Cache-Control', 'no-store');
+        }
         if ($path === '/soon') {
             return $this->landing->soon();
+        }
+        if ($path === '/robots.txt') {
+            $text = $this->config->staging ? "User-agent: *\nDisallow: /\n" : "User-agent: *\nAllow: /\nSitemap: " . $this->config->webUrl . "/sitemap.xml\n";
+            return Response::raw($text, 'text/plain; charset=utf-8');
+        }
+        if ($path === '/sitemap.xml') {
+            // shortcut: fixed pages only (no product or collection URLs), upgrade when the catalogue should be indexed
+            $urls = array_merge(['/', '/new-arrivals'], array_keys(PolicyPages::paths()));
+            $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n" . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+            foreach ($urls as $u) {
+                $xml .= '<url><loc>' . htmlspecialchars($this->config->webUrl . ($u === '/' ? '/' : $u), ENT_XML1) . "</loc></url>\n";
+            }
+            return Response::raw($xml . "</urlset>\n", 'application/xml; charset=utf-8');
+        }
+        if ($this->demoPages !== null && ($demo = $this->demoPages->handle($request, $path)) !== null) {
+            return $demo;
         }
         if (isset(PolicyPages::paths()[$path])) {
             return $this->policyPages->show($request, PolicyPages::paths()[$path]);
@@ -383,7 +408,7 @@ final class App
         }
         // not lower-cased: file names are case-sensitive
         if (str_starts_with($request->path, '/assets/')) {
-            return $this->staticFiles->serve($request->path);
+            return $this->staticFiles->serve($request->path, isset($request->query['v']));
         }
         return null;
     }

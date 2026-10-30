@@ -6,6 +6,15 @@ namespace Pratyangi\Views;
 /** Tiny template support: escaping, money text and rendering a template file with variables. */
 final class View
 {
+    /** "/assets/site.css" -> "/assets/site.css?v=<version>": public/version.txt when the build made one, else a hash of the file. A new file = a new URL, so styles and scripts can be cached for a year. */
+    public static function asset(string $path): string
+    {
+        static $seen = [];
+        $file = dirname(__DIR__, 2) . '/public' . $path;
+        $seen[$path] ??= is_file($file) ? substr(md5_file($file) ?: '', 0, 10) : '0';
+        return $path . '?v=' . $seen[$path];
+    }
+
     /** Escape a dynamic value for HTML text and quoted attributes. */
     public static function e(mixed $value): string
     {

@@ -34,6 +34,7 @@ final class ShopPages
         private ?\Closure $addressRepoFactory = null,
         private bool $smsEnabled = true,
         private ?\Closure $orderRepoFactory = null, // (\Closure():OrderRepo)
+        private bool $demoUi = false, // DEMO_UI: the account menu also lists Membership and My Reviews (preview pages)
     ) {
     }
 
@@ -115,6 +116,8 @@ final class ShopPages
             'addresses' => $addresses,
             'smsEnabled' => $this->smsEnabled,
             'orderCount' => $orderCount,
+            'demoUi' => $this->demoUi,
+            'profileView' => ($request->query['view'] ?? '') === 'profile', // phones: /account is the menu, ?view=profile the profile page
             'section' => $section,
         ]);
         return $this->page($request, ($section === 'overview' ? 'My Account' : ucfirst($section)) . ' | Pratyangi Fashions', 'Manage your Pratyangi Fashions orders, addresses and more.', $body, ['site.js', 'offers.js', 'address-book.js', 'account.js']);

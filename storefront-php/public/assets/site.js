@@ -399,6 +399,55 @@
     });
   }
 
+  /* ------------------------------------------------------------------ 5b. scroll lock for every dialog, sheet and overlay (iOS-safe: the page is pinned with position:fixed and put back where it was) */
+
+  var lockDepth = 0;
+  var lockY = 0;
+  function lockScroll() {
+    if (lockDepth++ > 0) return;
+    lockY = win.pageYOffset || 0;
+    var b = doc.body;
+    b.style.overflow = 'hidden';
+    b.style.position = 'fixed';
+    b.style.top = -lockY + 'px';
+    b.style.left = '0';
+    b.style.right = '0';
+    b.style.width = '100%';
+  }
+  function unlockScroll() {
+    if (lockDepth === 0 || --lockDepth > 0) return;
+    var b = doc.body;
+    b.style.overflow = b.style.position = b.style.top = b.style.left = b.style.right = b.style.width = '';
+    win.scrollTo(0, lockY);
+  }
+  win.PratyangiScroll = { lock: lockScroll, unlock: unlockScroll };
+
+  /* ------------------------------------------------------------------ 5c. announcement bar: one message at a time, slides up every 4 s, stops while hovered or touched; reduced motion = the first message only */
+
+  function announce() {
+    var box = qs('[data-pf="announce"]');
+    if (!box) return;
+    var items = qsa('p', box);
+    if (items.length < 2 || reduce) return;
+    box.classList.add('pf_annJs');
+    var now = 0, paused = false, timer = 0;
+    items[0].classList.add('pf_annOn');
+    function next() {
+      if (paused) return;
+      var out = items[now];
+      now = (now + 1) % items.length;
+      out.classList.remove('pf_annOn');
+      out.classList.add('pf_annOut');
+      win.setTimeout(function () { out.classList.remove('pf_annOut'); }, 500);
+      items[now].classList.add('pf_annOn');
+    }
+    function start() { win.clearInterval(timer); timer = win.setInterval(next, 4000); }
+    box.addEventListener('mouseenter', function () { paused = true; });
+    box.addEventListener('mouseleave', function () { paused = false; });
+    box.addEventListener('touchstart', function () { paused = true; }, { passive: true });
+    box.addEventListener('touchend', function () { win.setTimeout(function () { paused = false; }, 2500); }, { passive: true });
+    start();
+  }
   /* ------------------------------------------------------------------ 6. header: shop menu, search dialog, account */
 
   var header = {};
@@ -414,6 +463,7 @@
     var closeBtn = qs('[data-pf="search-close"]');
     var input = qs('#catalog-search');
     var results = qs('[data-pf="search-results"]');
+    header.el = qs('[data-pf="header"]');
     var empty = qs('[data-pf="search-empty"]');
     if (!toggle || !panel) return;
 
@@ -425,6 +475,7 @@
     function setMenu(open) {
       if (open === menuOpen) return;
       menuOpen = open;
+      if (open) lockScroll(); else unlockScroll();
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
       if (icon) icon.setAttribute('data-open', open ? 'true' : 'false');
       if (backdrop) backdrop.hidden = !open;
@@ -445,80 +496,126 @@
       }
     }
 
-    function openSearch() {
-      if (!scrim || !dialog || searchIsOpen) return;
-      searchIsOpen = true;
-      setMenu(false);
-      if (scrimExit) { scrimExit.forEach(function (a) { a.cancel(); }); scrimExit = null; }
-      scrim.hidden = false;
-      play(scrim, { opacity: 0 }, { opacity: 1 }, 300, 0, 'ease');
-      play(dialog, { opacity: 0, transform: 'translateY(16px) scale(0.98)' }, { opacity: 1, transform: 'none' }, 240, 0);
-      if (input) input.focus();
-    }
-    function closeSearch() {
-      if (!searchIsOpen) return;
-      searchIsOpen = false;
-      if (searchOpen) searchOpen.focus();
-      if (canAnimate && !reduce) {
-        var a1 = scrim.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 300, easing: 'ease', fill: 'forwards' });
-        var a2 = dialog.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(12px) scale(0.98)' }], { duration: 240, easing: EXPO, fill: 'forwards' });
-        scrimExit = [a1, a2];
-        a1.onfinish = function () { scrim.hidden = true; a1.cancel(); a2.cancel(); scrimExit = null; };
-      } else {
-        scrim.hidden = true;
-      }
-    }
-
-    toggle.addEventListener('click', function () { setMenu(!menuOpen); });
-    if (backdrop) backdrop.addEventListener('mousedown', function () { setMenu(false); });
-    qsa('.pSCCwa_menuGroup a', panel).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
-    if (searchOpen) searchOpen.addEventListener('click', openSearch);
-    if (closeBtn) closeBtn.addEventListener('click', closeSearch);
-    if (scrim) scrim.addEventListener('mousedown', function (event) { if (event.target === scrim) closeSearch(); });
-
-    // under 2 characters: the quick links filter locally. From 2 characters: the real catalogue (/api/v1/catalog/products?q=), 300 ms after typing stops
+    /* ---- search (GIVA-style): a full-screen overlay on a phone, a panel under the header from 1024px.
+       Empty box: recent searches (this browser only) and popular collections. From 2 characters (300 ms after typing stops, the old request cancelled):
+       Suggestions, Collections and up to 6 Products with the matched letters in bold, then "See all results". */
+    var RECENT_KEY = 'pf_recent_search';
+    var PLACEHOLDERS = ['Search \u2018Kanchipuram silk\u2019\u2026', 'Search \u2018Uppada\u2019\u2026', 'Search \u2018Banarasi\u2019\u2026'];
+    var recentBox = qs('[data-pf="search-recent"]');
+    var popularBox = qs('[data-pf="search-popular"]');
+    var liveBox = qs('[data-pf="search-live"]');
+    var suggList = qs('[data-pf="search-sugg"]');
+    var collList = qs('[data-pf="search-coll"]');
+    var allLink = qs('[data-pf="search-all"]');
+    var clearBtn = qs('[data-pf="search-clear"]');
+    var searchForm = qs('[data-pf="search-form"]');
     var productsBox = qs('[data-pf="search-products"]');
     var imgBase = dialog ? dialog.getAttribute('data-pf-img') || '' : '';
     var typing = 0;
     var inflight = null;
-    function showLinks(term) {
-      var any = false;
-      qsa('a[data-pf-text]', results).forEach(function (a) {
-        var words = (a.getAttribute('data-pf-text') || '').split('|');
-        var hit = !term || words.some(function (w) { return w.indexOf(term) !== -1; });
-        a.style.display = hit ? '' : 'none';
-        if (hit) any = true;
-      });
-      if (empty) { empty.textContent = 'No matching items.'; empty.hidden = any; }
+    var phTimer = 0;
+    var phIndex = 0;
+
+    function recentRead() {
+      try { var l = JSON.parse(win.localStorage.getItem(RECENT_KEY) || '[]'); return Array.isArray(l) ? l.filter(function (x) { return typeof x === 'string'; }).slice(0, 8) : []; } catch (e) { return []; }
     }
-    function showProducts(products) {
+    function recentWrite(list) { try { win.localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 8))); } catch (e) { /* private mode: no history, search still works */ } }
+    function remember(term) {
+      var list = recentRead().filter(function (x) { return x.toLowerCase() !== term.toLowerCase(); });
+      list.unshift(term);
+      recentWrite(list);
+    }
+    function el(tag, className, text) { var n = doc.createElement(tag); if (className) n.className = className; if (text) n.textContent = text; return n; }
+    /** The text with the letters the visitor typed in bold (DOM nodes only, never HTML). */
+    function bold(text, term) {
+      var frag = doc.createDocumentFragment();
+      var at = term ? text.toLowerCase().indexOf(term.toLowerCase()) : -1;
+      if (at < 0) { frag.appendChild(doc.createTextNode(text)); return frag; }
+      frag.appendChild(doc.createTextNode(text.slice(0, at)));
+      frag.appendChild(el('b', '', text.slice(at, at + term.length)));
+      frag.appendChild(doc.createTextNode(text.slice(at + term.length)));
+      return frag;
+    }
+    function searchUrl(term) { return '/search?q=' + encodeURIComponent(term); }
+
+    function paintRecent() {
+      if (!recentBox) return;
+      var list = recentRead();
+      var ul = qs('ul', recentBox);
+      ul.textContent = '';
+      list.forEach(function (term) {
+        var li = doc.createElement('li');
+        var a = el('a', 'pf_sitem', term);
+        a.href = searchUrl(term);
+        a.addEventListener('click', function () { remember(term); closeSearch(); });
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      recentBox.hidden = !list.length;
+    }
+    function showIdle() {
+      if (liveBox) liveBox.hidden = true;
+      if (popularBox) popularBox.hidden = false;
+      if (empty) empty.hidden = true;
+      paintRecent();
+    }
+    function itemLinks(box, entries, term, max) {
+      var ul = qs('ul', box);
+      ul.textContent = '';
+      entries.slice(0, max).forEach(function (e) {
+        var li = doc.createElement('li');
+        var a = el('a', 'pf_sitem');
+        a.href = e.href;
+        var label = doc.createElement('span');
+        label.appendChild(bold(e.label, term));
+        a.appendChild(label);
+        a.addEventListener('click', function () { remember(term); closeSearch(); });
+        li.appendChild(a);
+        ul.appendChild(li);
+      });
+      box.hidden = !entries.length;
+      return entries.length;
+    }
+    function localMatches(term) {
+      var t = term.toLowerCase();
+      var sugg = qsa('a[data-pf-text]', popularBox).filter(function (a) { return (a.getAttribute('data-pf-text') || '').split('|').some(function (w) { return w.indexOf(t) !== -1; }); })
+        .map(function (a) { return { label: a.firstChild ? a.firstChild.textContent.trim() : '', href: a.getAttribute('href') }; });
+      var group = qsa('.pSCCwa_menuGroup').filter(function (g) { var h = qs('h2', g); return h && h.textContent.trim() === 'COLLECTIONS'; })[0];
+      var colls = group ? qsa('a', group).filter(function (a) { return a.textContent.toLowerCase().indexOf(t) !== -1; }).map(function (a) { return { label: a.textContent.trim(), href: a.getAttribute('href') }; }) : [];
+      return { sugg: sugg, colls: colls };
+    }
+    function showProducts(products, term) {
       productsBox.textContent = '';
-      products.forEach(function (p) {
-        var a = doc.createElement('a');
+      if (products.length) productsBox.appendChild(el('h3', '', 'Products'));
+      products.slice(0, 6).forEach(function (p) {
+        var a = el('a', 'pf_searchHit pf_sitem');
         a.href = '/product?sku=' + encodeURIComponent(p.sku);
-        a.className = 'pf_searchHit';
         var img = doc.createElement('img');
         img.alt = '';
         img.width = 48; img.height = 48;
         img.src = imgBase && p.imagePath ? imgBase + String(p.imagePath).replace(/^\/+/, '') : '/assets/images/reference/product-1.webp';
-        var name = doc.createElement('span');
-        name.textContent = p.name;
-        var price = doc.createElement('strong');
-        price.textContent = '₹' + Number(p.price).toLocaleString('en-IN');
+        var name = el('span', 'pf_shName');
+        name.appendChild(bold(p.name, term));
+        var price = el('strong', '', '\u20B9' + Number(p.price).toLocaleString('en-IN'));
+        if (p.mrp > p.price) { var mrp = el('del', '', '\u20B9' + Number(p.mrp).toLocaleString('en-IN')); price.appendChild(mrp); }
         a.appendChild(img); a.appendChild(name); a.appendChild(price);
-        a.addEventListener('click', closeSearch);
+        a.addEventListener('click', function () { remember(term); closeSearch(); });
         productsBox.appendChild(a);
       });
       productsBox.hidden = !products.length;
-      if (empty) { empty.textContent = 'No products found'; empty.hidden = products.length > 0; }
     }
     function searchCatalog(term) {
       if (inflight) inflight.abort();
       inflight = new win.AbortController();
       var mine = inflight;
-      win.fetch('/api/v1/catalog/products?limit=8&q=' + encodeURIComponent(term), { signal: mine.signal, credentials: 'same-origin' })
+      win.fetch('/api/v1/catalog/products?limit=6&q=' + encodeURIComponent(term), { signal: mine.signal, credentials: 'same-origin' })
         .then(function (response) { if (!response.ok) throw new Error('search'); return response.json(); })
-        .then(function (data) { showProducts(Array.isArray(data.products) ? data.products : []); })
+        .then(function (data) {
+          var products = Array.isArray(data.products) ? data.products : [];
+          showProducts(products, term);
+          var local = localMatches(term);
+          if (empty) { empty.textContent = 'No results for \u201C' + term + '\u201D'; empty.hidden = products.length > 0 || local.sugg.length > 0 || local.colls.length > 0; }
+        })
         .catch(function (error) {
           if (error && error.name === 'AbortError') return; // a newer search replaced this one
           productsBox.hidden = true;
@@ -526,40 +623,89 @@
         });
     }
     function filter() {
-      var term = input ? input.value.trim().toLowerCase() : '';
+      var term = input ? input.value.trim() : '';
       win.clearTimeout(typing);
       if (inflight) { inflight.abort(); inflight = null; }
-      var long = term.length >= 2;
-      results.classList.toggle('pf_searchLive', long);
-      if (!long) { if (productsBox) productsBox.hidden = true; showLinks(term); return; }
+      if (clearBtn) clearBtn.hidden = !input.value;
+      if (input.value) stopPlaceholder(); else startPlaceholder();
+      if (term.length < 2) { showIdle(); return; }
+      if (recentBox) recentBox.hidden = true;
+      if (popularBox) popularBox.hidden = true;
+      liveBox.hidden = false;
+      var local = localMatches(term);
+      itemLinks(suggList, local.sugg, term, 5);
+      itemLinks(collList, local.colls, term, 4);
+      if (allLink) { allLink.href = searchUrl(term); allLink.hidden = false; }
+      productsBox.hidden = true;
       if (empty) empty.hidden = true;
       typing = win.setTimeout(function () { searchCatalog(term); }, 300);
     }
-    if (input) {
-      input.addEventListener('input', filter);
-      input.addEventListener('keydown', function (event) {
-        var term = input.value.trim();
-        if (event.key === 'Enter' && term.length >= 2) win.location.assign('/search?q=' + encodeURIComponent(term));
-      });
+    function nextPlaceholder() {
+      if (!input || input.value) return;
+      input.classList.add('pf_phFade');
+      win.setTimeout(function () { phIndex = (phIndex + 1) % PLACEHOLDERS.length; input.placeholder = PLACEHOLDERS[phIndex]; input.classList.remove('pf_phFade'); }, 220);
     }
-    if (results) qsa('a', results).forEach(function (a) { a.addEventListener('click', closeSearch); });
+    function startPlaceholder() { win.clearInterval(phTimer); if (!reduce) phTimer = win.setInterval(nextPlaceholder, 3000); }
+    function stopPlaceholder() { win.clearInterval(phTimer); phTimer = 0; }
 
-    // Esc closes the search dialog first, otherwise the menu; Tab stays inside the open dialog
+    function openSearch() {
+      if (!scrim || !dialog || searchIsOpen) return;
+      searchIsOpen = true;
+      setMenu(false);
+      var bar = header.el || qs('[data-pf="header"]');
+      dialog.style.setProperty('--pf-sd-top', (bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0) + 'px');
+      scrim.hidden = false;
+      lockScroll();
+      if (input) { input.placeholder = PLACEHOLDERS[phIndex]; showIdle(); input.focus(); startPlaceholder(); }
+    }
+    function closeSearch() {
+      if (!searchIsOpen) return;
+      searchIsOpen = false;
+      scrim.hidden = true;
+      unlockScroll();
+      stopPlaceholder();
+      win.clearTimeout(typing);
+      if (inflight) { inflight.abort(); inflight = null; }
+      if (searchOpen) searchOpen.focus();
+    }
+    function submit() {
+      var term = input ? input.value.trim() : '';
+      if (term.length < 2) return;
+      remember(term);
+      win.location.assign(searchUrl(term));
+    }
+    function searchItems() { return qsa('.pf_sitem', results).filter(function (n) { return n.offsetParent !== null; }); }
+
+    toggle.addEventListener('click', function () { setMenu(!menuOpen); });
+    if (backdrop) backdrop.addEventListener('mousedown', function () { setMenu(false); });
+    qsa('.pSCCwa_menuGroup a', panel).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+    if (searchOpen) searchOpen.addEventListener('click', openSearch);
+    if (closeBtn) closeBtn.addEventListener('click', closeSearch);
+    if (scrim) scrim.addEventListener('mousedown', function (event) { if (event.target === scrim) closeSearch(); });
+    if (searchForm) searchForm.addEventListener('submit', function (event) { event.preventDefault(); submit(); });
+    if (clearBtn) clearBtn.addEventListener('click', function () { input.value = ''; filter(); input.focus(); });
+    var clearAll = qs('[data-pf="search-recent-clear"]');
+    if (clearAll) clearAll.addEventListener('click', function () { recentWrite([]); paintRecent(); input.focus(); });
+    if (input) input.addEventListener('input', filter);
+    if (popularBox) qsa('a', popularBox).forEach(function (a) { a.classList.add('pf_sitem'); a.addEventListener('click', closeSearch); });
+    if (allLink) allLink.addEventListener('click', function () { remember(input.value.trim()); });
+
+    // Esc closes the search first, otherwise the menu; the arrow keys walk the suggestions, and ArrowUp from the first one goes back to the box
     win.addEventListener('keydown', function (event) {
       if (!searchIsOpen && !menuOpen) return;
       if (event.key === 'Escape') {
         if (searchIsOpen) closeSearch(); else setMenu(false);
         return;
       }
-      if (event.key !== 'Tab' || !searchIsOpen || !dialog) return;
-      var focusable = qsa('a[href], button:not([disabled]), input', dialog).filter(function (el) { return el.style.display !== 'none'; });
-      if (!focusable.length) return;
-      var first = focusable[0];
-      var lastEl = focusable[focusable.length - 1];
-      if (event.shiftKey && doc.activeElement === first) { event.preventDefault(); lastEl.focus(); }
-      else if (!event.shiftKey && doc.activeElement === lastEl) { event.preventDefault(); first.focus(); }
+      if (!searchIsOpen || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
+      var list = searchItems();
+      if (!list.length) return;
+      var at = list.indexOf(doc.activeElement);
+      event.preventDefault();
+      if (event.key === 'ArrowDown') list[Math.min(list.length - 1, at + 1)].focus();
+      else if (at <= 0) input.focus();
+      else list[at - 1].focus();
     });
-
     header.setMenu = setMenu;
   }
 
@@ -924,7 +1070,7 @@
     function close() {
       if (!open) return;
       open.scrim.remove();
-      doc.body.style.overflow = open.overflow;
+      unlockScroll();
       var back = open.opener;
       open = null;
       if (back) back.focus();
@@ -968,8 +1114,8 @@
       box.appendChild(x); box.appendChild(img); box.appendChild(info);
       scrim.appendChild(box);
       doc.body.appendChild(scrim);
-      open = { scrim: scrim, box: box, opener: opener, overflow: doc.body.style.overflow };
-      doc.body.style.overflow = 'hidden';
+      open = { scrim: scrim, box: box, opener: opener };
+      lockScroll();
       x.addEventListener('click', close);
       scrim.addEventListener('mousedown', function (event) { if (event.target === scrim) close(); });
       add.addEventListener('click', function () { add.textContent = 'Added'; win.setTimeout(function () { add.textContent = 'Add to bag'; }, 1200); });
@@ -1015,6 +1161,7 @@
     avatarFallback();
     retry();
     initHeader();
+    announce();
     categories();
     tryOn();
     forms();

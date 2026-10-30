@@ -42,6 +42,8 @@ final class Config
     public readonly string $shopPhone;
     public readonly string $shopSupportEmail;
     public readonly string $shopHours;
+    /** @var list<string> the rotating messages of the top bar (SHOP_ANNOUNCEMENTS, pipe-separated) */
+    public readonly array $shopAnnouncements;
     /** Company identity number (SHOP_CIN), WhatsApp number as digits with the country code (SHOP_WHATSAPP), and the Grievance Officer (SHOP_GRIEVANCE_*); empty = not shown. */
     public readonly string $shopCin;
     /** Shops & Establishments registration number (SHOP_SE_REG), shown on /contact only; empty = hidden. */
@@ -83,6 +85,8 @@ final class Config
     public readonly bool $smsEnabled;
     public readonly string $orderOtp;
     public readonly bool $checkoutEnabled;
+    /** DEMO_UI=true shows the mock preview screens (app/Demo/DemoData.php: checkout steps 2-3, payment methods, membership, reviews). Refused in production. */
+    public readonly bool $demoUi;
     public readonly bool $paymentsEnabled;
     public readonly ?string $razorpayKeyId;
     private readonly ?string $razorpayKeySecret;
@@ -202,6 +206,7 @@ final class Config
         $this->shopPhone = $plain((string) ($v['SHOP_PHONE'] ?? ''));
         $this->shopSupportEmail = (string) ($v['SHOP_SUPPORT_EMAIL'] ?? '');
         $this->shopHours = $plain((string) ($v['SHOP_HOURS'] ?? ''));
+        $this->shopAnnouncements = array_slice(array_values(array_filter(array_map(static fn (string $m): string => $plain(trim($m)), explode('|', (string) ($v['SHOP_ANNOUNCEMENTS'] ?? 'Authentic Handlooms|Handwoven by master artisans|Help on WhatsApp'))), static fn (string $m): bool => $m !== '')), 0, 6);
         foreach (['SHOP_LEGAL_NAME' => 120, 'SHOP_ADDRESS' => 300, 'SHOP_PHONE' => 40, 'SHOP_HOURS' => 120] as $name => $max) {
             if (mb_strlen((string) ($v[$name] ?? '')) > $max) {
                 $problems[] = $name . ': at most ' . $max . ' characters';
@@ -359,6 +364,10 @@ final class Config
         $this->orderOtp = $orderOtp;
         $this->checkoutEnabled = self::bool($v, 'CHECKOUT_ENABLED', $problems);
         $this->paymentsEnabled = self::bool($v, 'PAYMENTS_ENABLED', $problems);
+        $this->demoUi = self::bool($v, 'DEMO_UI', $problems);
+        if ($this->demoUi && $this->isProduction) {
+            $problems[] = 'DEMO_UI: must be false (or unset) when APP_ENV=production, the preview screens show made-up data';
+        }
         if ($this->paymentsEnabled && $erpMode === 'http' && $orderKey === null && !self::hasProblem($problems, 'ERP_ORDER_KEY')) {
             $problems[] = 'ERP_ORDER_KEY: required when PAYMENTS_ENABLED=true and ERP_MODE=http';
         }

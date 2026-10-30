@@ -396,7 +396,7 @@ $t->test('every image and style the new pages point to exists', function () use 
 
 $t->test('StaticFiles: exactly the named scripts are JavaScript', function () use ($t, $root): void {
     $app = Helpers::app();
-    foreach (['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'] as $name) {
+    foreach (['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js', 'demo.js'] as $name) {
         $r = $app->handle(Helpers::request('GET', '/assets/' . $name));
         $t->same(200, $r->status(), $name);
         $t->same('text/javascript; charset=utf-8', $r->header('Content-Type'), $name);
@@ -407,7 +407,7 @@ $t->test('StaticFiles: exactly the named scripts are JavaScript', function () us
     }
     // every .js file in public/assets is either on the allow-list or refused
     $it = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/public/assets', FilesystemIterator::SKIP_DOTS));
-    $allowed = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js'];
+    $allowed = ['site.js', 'auth.js', 'bag.js', 'listing.js', 'product.js', 'bag-page.js', 'account.js', 'auth-otp.js', 'address-book.js', 'wishlist.js', 'cookies.js', 'offers.js', 'demo.js'];
     foreach ($it as $file) {
         if (strtolower($file->getExtension()) === 'js') {
             $relative = str_replace('\\', '/', substr($file->getPathname(), strlen($root . '/public/assets/')));

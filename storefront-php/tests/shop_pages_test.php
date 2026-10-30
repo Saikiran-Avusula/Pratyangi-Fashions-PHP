@@ -167,7 +167,7 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
     $r = $pages($asha)->account($get('/account', $cookie));
     $t->same(200, $r->status());
     $b = $r->body();
-    foreach (['<title>My Account | Pratyangi Fashions</title>', '<div class="pnvDaq_page">', '<main class="pnvDaq_main">', '<h1>My Account</h1>', 'Manage your orders, addresses and more',
+    foreach (['<title>My Account | Pratyangi Fashions</title>', '<div class="pnvDaq_page">', '<main class="pnvDaq_main pf_menuOn">', '<h1>My Account</h1>', 'Manage your orders, addresses and more',
         '<a class="pnvDaq_navItem pnvDaq_navActive" aria-current="page" href="/account">', '<span>Overview</span>', '<span>My Orders</span>', '<span>Help &amp; Support</span>',
         '<button type="button" class="pnvDaq_logout" data-pf="logout">', 'Logout</button>', '<h2>Hello, asha</h2>', 'Welcome to Pratyangi Fashions',
         '<span>Member since Oct 2026</span>', '<span>asha@example.com</span>', '<strong>0</strong>Total orders', '<strong>0</strong>Saved Addresses',
@@ -175,13 +175,14 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
         '<p>No orders yet.</p>', 'href="/new-arrivals">Start shopping', '<h2>No saved addresses yet.</h2>', 'data-pf-open-address>+ Add address</button>', 'data-pf-address-modal'] as $needle) {
         $t->contains($needle, $b, $needle);
     }
-    $t->same(7, substr_count($b, 'class="pnvDaq_navItem'), 'seven sidebar rows');
+    $t->same(7, substr_count($b, 'class="pnvDaq_navItem'), 'seven sidebar rows (Figma; My Reviews is hidden until it exists)');
+    $t->same(7, substr_count($b, 'class="pf_acctMenuRow"'), 'seven phone menu rows (Figma D1 without Membership and My Reviews)');
     $t->same(0, substr_count($b, 'href="/soon"'), 'every sidebar row has its own page');
     $t->contains('href="/account/orders"', $b, 'My Orders has its own page');
     foreach (['Manage at Checkout', 'Go to Checkout'] as $gone) {
         $t->ok(!str_contains($b, $gone), 'no "' . $gone . '": it has no page');
     }
-    $t->contains('<div class="pf_topbar"><p>Authentic Handlooms</p><p class="pf_topbarLinks"><a href="/contact">Contact</a></p></div>', $b, 'the one top bar, with a link only to a page that exists');
+    $t->contains('<div class="pf_topbar"><div class="pf_ann" data-pf="announce"><p>Authentic Handlooms</p><p>Handwoven by master artisans</p><p>Help on WhatsApp</p></div><p class="pf_topbarLinks"><a href="/contact">Contact</a></p></div>', $b, 'the one top bar, with a link only to a page that exists');
     $t->same(1, substr_count($b, 'pf_topbar"'), 'one top bar');
     $t->same(2, substr_count($b, 'P71-SG_statOrders'), 'both stat cards share one style');
     $t->same(1, substr_count($b, 'data-pf-open-address'), 'one Add address button (empty state)');

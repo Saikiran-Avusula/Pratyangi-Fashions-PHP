@@ -23,6 +23,7 @@ final class BrowserRig
 require ' . var_export($root . '/tests/lib/TestCase.php', true) . '; require ' . var_export($root . '/tests/lib/Helpers.php', true) . '; require ' . var_export($root . '/tests/lib/DbGuard.php', true) . ';
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
 if ($path === "/__w") { header("Content-Type: text/html"); readfile(' . var_export($tmp . '/wrap.html', true) . '); return; }
+if ($path === "/__p") { file_put_contents(' . var_export($tmp . '/progress.txt', true) . ', str_replace(["\r", "\n"], " ", (string) file_get_contents("php://input")) . "\n", FILE_APPEND); header("Content-Type: text/plain"); echo "ok"; return; } // progress events of tests/browser_layout_test.php
 $file = ' . var_export($root . '/public', true) . ' . $path;
 if ($path !== "/" && is_file($file)) {
     $types = ["css" => "text/css", "js" => "text/javascript", "svg" => "image/svg+xml", "png" => "image/png", "jpg" => "image/jpeg", "webp" => "image/webp", "woff2" => "font/woff2"];
@@ -33,7 +34,7 @@ if ($path !== "/" && is_file($file)) {
 ob_start(); // DbGuard prints a banner; it must not land in the page
 $pdo = DbGuard::connect();
 ob_end_clean();
-$config = Helpers::config(["SMS_ENABLED" => getenv("PF_CC_SMS") ?: "true", "SMS_MODE" => "log", "SMS_LOG_PATH" => ' . var_export($tmp . '/sms.log', true) . ', "MAIL_LOG_PATH" => ' . var_export($tmp . '/mail.log', true) . ', "OTP_PEPPER" => str_repeat("S", 48),
+$config = Helpers::config(["DEMO_UI" => getenv("PF_TEST_DEMO_UI") ?: "false", "SMS_ENABLED" => getenv("PF_CC_SMS") ?: "true", "SMS_MODE" => "log", "SMS_LOG_PATH" => ' . var_export($tmp . '/sms.log', true) . ', "MAIL_LOG_PATH" => ' . var_export($tmp . '/mail.log', true) . ', "OTP_PEPPER" => str_repeat("S", 48),
     // the real company details, so the footer and /contact are drawn in full (an apostrophe, comma, # and & in the Grievance Officer prove the escaping)
     "SHOP_LEGAL_NAME" => "Vistaraverse E-Cart Private Limited", "SHOP_ADDRESS" => "#102, Sahiti Ramkuteer, Jai Hind Gandhi Road, VIP Hills, Silicon Valley, Madhapur, Hyderabad, Telangana 500081", "SHOP_SE_REG" => "SEA/RAN/ALO/BN/1425883/2026", "SHOP_CIN" => "U46901AP2026PTC126193",
     "SHOP_GSTIN" => "36AAMCV3017H1Z9", "SHOP_PHONE" => "+91 99892 33328", "SHOP_WHATSAPP" => "919989233328", "SHOP_SUPPORT_EMAIL" => "info@pratyangi.com",

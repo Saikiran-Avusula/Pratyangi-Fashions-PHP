@@ -163,8 +163,8 @@ button:not(:disabled), [role="button"], summary, label[for], select, input[type=
 .pf_emptyBtn.pf_emptyGhost { background: transparent; color: var(--burgundy, #800020); }
 
 /* the wishlist heart is the first action beside the bag; up to 1200px the search is the round icon (as on a phone) so the logo keeps clear of the four actions */
-@media (min-width: 701px) and (max-width: 1200px) { .pSCCwa_searchButton { width: 40px; padding: 0; border: 0; border-radius: 50%; justify-content: center; } .pSCCwa_searchButton span { display: none; } }
-@media (min-width: 1201px) and (max-width: 1500px) { .pSCCwa_searchButton { width: 120px; } }
+@media (min-width: 701px) and (max-width: 1023px) { .pSCCwa_searchButton { width: 40px; padding: 0; border: 0; border-radius: 50%; justify-content: center; } .pSCCwa_searchButton span { display: none; } }
+@media (min-width: 1024px) and (max-width: 1500px) { .pSCCwa_searchButton { width: 120px; } }
 
 /* "Continue with Google" under the sign-in and sign-up forms */
 .pf_google { display: grid; gap: 12px; margin: 4px 0 20px; }
@@ -176,7 +176,7 @@ button:not(:disabled), [role="button"], summary, label[for], select, input[type=
 
 /* header actions: one icon family (lucide outline), one size, one stroke; beats the copied web rules that sized the 1st/2nd link by position */
 .pSCCwa_headerActions .pSCCwa_iconButton svg { width: 24px !important; height: 24px !important; margin: 0 !important; stroke-width: 2; }
-@media (max-width: 1200px) { .pSCCwa_headerActions .pSCCwa_searchButton svg { width: 24px; height: 24px; } }
+@media (max-width: 1023px) { .pSCCwa_headerActions .pSCCwa_searchButton svg { width: 24px; height: 24px; } }
 
 /* ---- M1: mobile-first audit fixes (tests/browser_layout_test.php) ---- */
 /* tap targets, three kinds (checked by tests/browser_layout_test.php). 1) real 44px boxes: buttons, links styled as buttons, inputs, header icons, dialog close buttons */
@@ -243,9 +243,6 @@ button:not(:disabled), [role="button"], summary, label[for], select, input[type=
 .pf_grievance > p { margin: 14px 0 0; }
 
 /* error pages: the 404 search box */
-.pf_errSearch{display:flex;gap:8px;max-width:420px;margin:0 auto 48px;padding:0 16px}
-.pf_errSearch input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid #d9d2c5;border-radius:8px;font:inherit}
-.pf_errSearch button{min-height:44px;min-width:88px;padding:0 16px;border:0;border-radius:8px;background:#5b1a2b;color:#fff;font:inherit;cursor:pointer}
 .pf_docBrand { margin: 32px 0 0; font-size: 13px; color: #5a5248; text-align: center; }
 
 /* ---- C1: the account links at the end of the shop menu, and the floating WhatsApp button (only when SHOP_WHATSAPP is set) ---- */
@@ -327,3 +324,138 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 .pf_helpHeading { margin: 0; font-size: 16px; }
 .pf_help a.neurva_submit { display: flex; align-items: center; justify-content: center; text-decoration: none; box-sizing: border-box; }
 .pf_helpContact a.neurva_inlineLink { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ---- PX0: real-phone fixes ---- */
+/* 404: the header's search field inside the empty state */
+.pf_errSearch { width: 100%; max-width: 420px; margin: 8px 0 0; text-align: left; }
+.pf_errSearch .pSCCwa_searchField svg { flex: none; }
+.pf_errSearch input { min-height: 44px; font: inherit; }
+/* the Google picture fills the circle and the initial is hidden behind it (site.js drops a picture that fails, then the initial shows) */
+.pSCCwa_avatar:has(> img[data-pf="avatar-img"]) > :not(img), .P71-SG_avatar:has(> img[data-pf="avatar-img"]) > :not(img) { visibility: hidden; }
+.pSCCwa_avatar, .P71-SG_avatar { overflow: hidden; }
+/* /account tab bar: scrolls sideways, no visible scrollbar line */
+.pnvDaq_sidebar nav { scrollbar-width: none; }
+.pnvDaq_sidebar nav::-webkit-scrollbar { display: none; }
+/* the cookie panel wraps its text, never widens the page, and scrolls inside the bar when taller than the screen */
+.pf_cookie { max-height: 90vh; overflow-y: auto; overscroll-behavior: contain; }
+.pf_cookiePanel, .pf_cookieRow > span, .pf_cookieText { min-width: 0; overflow-wrap: anywhere; }
+/* home category carousel: swipe on a phone (no arrows); on a desktop an arrow that cannot move is hidden, not faded over the cards */
+.YnyroG_categoryTrack { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.YnyroG_categoryTrack > * { scroll-snap-align: start; }
+@media (max-width: 767px) { .YnyroG_carouselArrow { display: none; } }
+.YnyroG_carouselArrow:disabled { visibility: hidden; }
+
+/* ---- PX0b: the phone account menu (Figma D1) replaces the tab bar under 768px; a back arrow on the pages it opens ---- */
+.pf_acctMenu, .pf_acctBack { display: none; }
+@media (max-width: 767px) {
+  .pnvDaq_sidebar { display: none; }
+  .pf_menuOn .pnvDaq_headingRow, .pf_menuOn .pnvDaq_layout { display: none; }
+  .pf_acctMenu { display: block; padding: 8px clamp(0px, 8vw, 32px) 24px; } /* D1 (394px): list 64px from the edge, Logout 48px; the page gutter supplies 16px */
+  .pf_acctBack { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin: 0 0 8px; color: #3b2b27; font: 500 16px/1 var(--font-body, inherit); text-decoration: none; }
+  .pf_acctMenuAvatar { display: block; width: 94px; height: 94px; border-width: 0; }
+  .pf_acctMenuAvatar .P71-SG_avatarInitial { font-size: 36px; }
+  .pf_acctMenuName { margin: 14px 0 0; font: 600 20px/1.3 var(--font-body, inherit); color: #222; }
+  .pf_acctMenuEmail { margin: 4px 0 24px; font: 400 16px/1.4 var(--font-body, inherit); color: #6b6b6b; overflow-wrap: anywhere; }
+  .pf_acctMenu nav { display: grid; }
+  .pf_acctMenuRow { display: grid; grid-template-columns: 24px 1fr 16px; align-items: center; gap: 14px; min-height: 82px; padding: 0 clamp(0px, 4vw, 16px); color: #222; text-decoration: none; }
+  .pf_acctMenuRow strong { display: block; font: 500 16px/1.5 var(--font-body, inherit); }
+  .pf_acctMenuRow small { display: block; margin-top: 2px; font: 400 13px/1.5 var(--font-body, inherit); color: #6b6b6b; }
+  .pf_acctMenuRow > svg:last-child { color: #222; }
+  .pf_acctMenuLogout { appearance: none; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 44px; margin-top: 28px; border: 1px solid var(--burgundy, #800020); border-radius: 4px; background: #fff; color: var(--burgundy, #800020); font: 600 14px/1 var(--font-body, inherit); cursor: pointer; }
+  .pf_acctMenuAvatar, .pf_acctMenuName, .pf_acctMenuEmail { margin-left: clamp(0px, 4vw, 16px); }
+}
+/* footer: on a phone the company column (address, e-mail) takes the full row, so no line is broken inside a word */
+@media (max-width: 767px) { .f_viWW_footerColumn[data-pf="company"] { grid-column: 1 / -1; } }
+.f_viWW_footerColumn[data-pf="company"] a, .f_viWW_footerColumn[data-pf="company"] span { overflow-wrap: break-word; word-break: normal; }
+/* address dialog: Check Pincode beside the pincode (disabled until the pincode service exists); full-height bottom sheet on a phone */
+.pf_pinRow { display: flex; align-items: center; gap: 12px; }
+.pf_pinRow input { flex: 1; min-width: 0; }
+.pf_checkPin { appearance: none; flex: none; min-height: 44px; padding: 0; border: 0; background: none; color: var(--burgundy, #800020); font: 700 13px/1 var(--font-body, inherit); text-decoration: underline; }
+.pf_checkPin:disabled { opacity: 0.55; cursor: not-allowed; }
+@media (max-width: 767px) { .mdI9xa_dialog { height: calc(100dvh - 16px); max-height: none; } }
+
+/* ---- PX0c: Figma page background (cream, as the account pages) on the listing, bag, wishlist and product pages ---- */
+._4HCqHa_page, .BpPmcW_page, .oYM1ta_page, .udK_nG_page { background: #faf7f2; }
+/* wishlist: the Figma card grid (three across on a desktop, two on a tablet, one column on a phone) instead of a thin list */
+.pf_wishlist { max-width: none; padding: 16px 0 48px; }
+@media (min-width: 600px) { .pf_wishlist { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; align-items: start; } }
+.pf_wishlist_row { display: grid; grid-template-columns: 1fr; gap: 8px; padding: 0; border: 0; align-content: start; }
+.pf_wishlist_img { width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit: cover; border-radius: 4px; background: #fffbd0; box-shadow: 0 2px 8px #0000001f; }
+.pf_wishlist_name { color: var(--burgundy, #800020); font-weight: 400; font-size: 14px; }
+.pf_wishlist_price { margin: 2px 0 0; color: #3b2b27; font-size: 14px; font-weight: 600; }
+.pf_wishlist_actions { grid-column: auto; }
+/* "+ Add address" as the Figma link: burgundy, underlined, 14px */
+.P71-SG_linkMuted.pf_linkBtn { color: var(--burgundy, #800020); font-size: 14px; font-weight: 600; text-decoration: underline; }
+/* address sheet on a phone: Address Type is one row of three equal chips (icon + label, no subtitle); under 360px the icon sits above the label so nothing is cut */
+@media (max-width: 767px) {
+  .mdI9xa_types { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .mdI9xa_type { min-height: 56px; justify-content: center; gap: 8px; padding: 8px 6px; min-width: 0; }
+  .mdI9xa_typeText small { display: none; }
+  .mdI9xa_typeText strong { font-size: 14px; white-space: nowrap; }
+}
+@media (max-width: 359px) { .mdI9xa_type { flex-direction: column; gap: 4px; } }
+
+/* ---- UI7a: announcement bar, header (left: menu + logo; right: search, wishlist, bag, account), sign-in loader, overscroll ---- */
+.pf_ann { position: relative; flex: 1; min-width: 0; height: 32px; overflow: hidden; }
+.pf_ann p { position: absolute; inset: 0; display: flex; align-items: center; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; opacity: 0; transform: translateY(100%); transition: opacity 0.4s ease, transform 0.4s ease; }
+.pf_ann:not(.pf_annJs) p:first-child, .pf_ann p.pf_annOn { opacity: 1; transform: none; }
+.pf_ann p.pf_annOut { opacity: 0; transform: translateY(-100%); }
+@media (prefers-reduced-motion: reduce) { .pf_ann p { transition: none; } }
+@media (max-width: 767px) { .pf_topbarLinks { display: none; } .pf_topbar { justify-content: center; } .pf_ann p { justify-content: center; } }
+
+.pSCCwa_headerInner { display: flex; align-items: center; gap: 8px; }
+.pSCCwa_brand { margin-right: 16px; justify-self: auto; }
+.pSCCwa_headerActions { margin-left: auto; flex: none; }
+/* both counts sit on the top-right corner of the 24px icon, half outside it */
+.pSCCwa_headerActions .pSCCwa_count { top: calc(50% - 12px); left: calc(50% + 12px); right: auto; transform: translate(-50%, -50%); min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; font-size: 10px; line-height: 16px; }
+/* the account picture is the size of the icon beside it */
+.pSCCwa_avatar { width: 28px; height: 28px; font-size: 13px; box-shadow: none; }
+.pSCCwa_accountLink { min-width: 44px; justify-content: center; }
+
+.pf_signing { position: fixed; inset: 0; z-index: 200; display: grid; place-content: center; justify-items: center; gap: 16px; background: #faf7f2; color: #3b2b27; font: 500 16px/1.4 var(--font-body, inherit); }
+.pf_signing img { width: 72px; height: 72px; object-fit: contain; }
+.pf_signing p { margin: 0; }
+.pf_spin { width: 28px; height: 28px; border: 3px solid #eadfc8; border-top-color: var(--burgundy, #800020); border-radius: 50%; animation: pf_spin 0.9s linear infinite; }
+@keyframes pf_spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .pf_spin { animation-duration: 2.4s; } }
+
+/* every sheet and overlay scrolls inside itself and never hands the scroll to the page */
+.pSCCwa_menuPanel, .pSCCwa_scrim, ._3CJUpq_scrim, .mdI9xa_scrim, .mdI9xa_dialog, .pf_qv_scrim, .pf_qv, .pf_dModal, .pf_dScrim, .pf_cookie { overscroll-behavior: contain; }
+
+/* ---- UI7a: search overlay. Phone and tablet: a full-screen sheet that slides down. From 1024px: a panel under the header, on the right. ---- */
+.pSCCwa_scrim[data-pf="search-scrim"] { align-items: flex-start; justify-content: stretch; padding: 0; }
+.pSCCwa_dialog.pf_sd { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border-radius: 0; background: #fff; overflow: hidden; animation: pf_sdIn 0.28s ease-out; }
+@keyframes pf_sdIn { from { transform: translateY(-28px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pSCCwa_dialog.pf_sd { animation: none; } }
+.pf_sbar { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); border-bottom: 1px solid #eadfc8; background: #fffbea; }
+.pf_sfield.pSCCwa_searchField { flex: 1; min-width: 0; gap: 0; padding: 0 2px 0 4px; border: 1px solid #d9d2c5; border-radius: 999px; background: #fff; }
+.pf_sgo, .pf_sclear { appearance: none; flex: none; display: grid; place-items: center; width: 44px; height: 44px; border: 0; background: none; color: var(--burgundy, #800020); cursor: pointer; }
+.pf_sclear[hidden] { display: none; }
+.pf_sfield input { flex: 1; min-width: 0; min-height: 44px; padding: 0 4px; border: 0; outline: 0; background: transparent; font: 400 16px/1.2 var(--font-body, inherit); }
+.pf_sfield input::-webkit-search-cancel-button { display: none; }
+.pf_sfield input::placeholder { color: #7a7066; opacity: 1; transition: opacity 0.2s; }
+.pf_sfield input.pf_phFade::placeholder { opacity: 0; }
+.pf_sfield:focus-within { border-color: var(--burgundy, #800020); }
+.pf_sbar .pSCCwa_closeButton { position: static; flex: none; width: 44px; height: 44px; }
+.pf_sbody { flex: 1; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 4px 16px 24px; }
+.pf_sbody h3 { display: flex; align-items: center; justify-content: space-between; margin: 16px 0 4px; color: #6b6b6b; font: 600 12px/1.3 var(--font-body, inherit); letter-spacing: 0.05em; text-transform: uppercase; }
+.pf_sbody h3 button { appearance: none; min-height: 44px; padding: 0 4px; border: 0; background: none; color: var(--burgundy, #800020); font: 600 13px/1 var(--font-body, inherit); letter-spacing: 0; text-transform: none; cursor: pointer; }
+.pf_sbody ul { margin: 0; padding: 0; list-style: none; }
+.pf_sitem { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; color: #222; text-decoration: none; font: 400 15px/1.3 var(--font-body, inherit); }
+.pf_sitem b { color: var(--burgundy, #800020); font-weight: 700; }
+.pf_sitem:focus-visible { outline: 2px solid var(--burgundy, #800020); outline-offset: -2px; }
+.pf_searchHit.pf_sitem { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; padding: 6px 0; }
+.pf_searchHit .pf_shName { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.pf_searchHit strong { text-align: right; font-weight: 600; }
+.pf_searchHit del { margin-left: 6px; color: #7a7066; font-size: 12px; font-weight: 400; }
+.pf_sbody .pf_seeAll { display: flex; width: 100%; box-sizing: border-box; align-items: center; justify-content: center; min-height: 44px; margin-top: 12px; border: 1px solid var(--burgundy, #800020); border-radius: 6px; color: var(--burgundy, #800020); font: 600 14px/1 var(--font-body, inherit); text-decoration: none; padding: 0; }
+.pf_sbody .pf_seeAll[hidden] { display: none; }
+.pf_sbody [data-pf="search-empty"] { margin: 24px 0; color: #5a5248; text-align: center; }
+@media (min-width: 1024px) {
+  .pSCCwa_scrim[data-pf="search-scrim"] { background: #1e130f40; }
+  .pSCCwa_dialog.pf_sd { position: fixed; top: var(--pf-sd-top, 80px); right: clamp(20px, 4vw, 48px); width: min(560px, calc(100vw - 40px)); height: auto; max-height: calc(100dvh - var(--pf-sd-top, 80px) - 24px); border-radius: 0 0 10px 10px; box-shadow: 0 18px 50px #190a0b40; }
+}
+
+/* ---- UI7a: an empty bag shows the shared empty state and nothing else: no title row, summary, coupon, recommendations or promises ---- */
+.BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) :is(.BpPmcW_titleRow, .BpPmcW_intro, .BpPmcW_summary, .BpPmcW_assurance, .BpPmcW_status, .BpPmcW_recommended, .OL4btW_section, .BpPmcW_continue) { display: none !important; }
+.BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_layout { display: grid; min-height: min(70vh, 560px); place-items: center; }

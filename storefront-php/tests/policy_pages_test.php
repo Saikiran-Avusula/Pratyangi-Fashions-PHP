@@ -79,11 +79,11 @@ $t->test('the logo picture can be embedded by other sites (an email shown in a w
 $t->test('SHOP_FREE_SHIPPING_ABOVE: the top bar line with Indian digit grouping; empty hides it; a bad value stops start-up', function () use ($t, $get): void {
     foreach (['1999' => '₹1,999', '999' => '₹999', '125000' => '₹1,25,000', '12345678' => '₹1,23,45,678'] as $value => $shown) {
         $b = $get('/contact', ['SHOP_FREE_SHIPPING_ABOVE' => (string) $value])->body();
-        $t->contains('<div class="pf_topbar"><p>Free Shipping on Orders Above ' . $shown . ' &nbsp;|&nbsp; Authentic Handlooms</p>', $b, (string) $value);
+        $t->contains('<div class="pf_topbar"><div class="pf_ann" data-pf="announce"><p>Free Shipping on Orders Above ' . $shown . '</p><p>Authentic Handlooms</p>', $b, (string) $value);
     }
     $b = $get('/contact', [])->body();
     $t->ok(!str_contains($b, 'Free Shipping'), 'empty: no free-shipping line anywhere');
-    $t->contains('<div class="pf_topbar"><p>Authentic Handlooms</p>', $b);
+    $t->contains('<div class="pf_topbar"><div class="pf_ann" data-pf="announce"><p>Authentic Handlooms</p><p>Handwoven by master artisans</p><p>Help on WhatsApp</p></div>', $b);
     foreach (['abc', '0', '-5', '19.99', '1,999'] as $bad) {
         $t->throws(ConfigException::class, static fn () => Helpers::config(['SHOP_FREE_SHIPPING_ABOVE' => $bad]), $bad);
     }

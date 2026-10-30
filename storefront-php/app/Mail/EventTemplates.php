@@ -63,7 +63,7 @@ final class EventTemplates
             'We received your payment for order ' . $o['orderNo'] . '.',
             ['rows' => [['Amount paid', self::inr($o['amountPaise'])], ['Payment method', $o['method']]]],
             'This is not a GST tax invoice. The tax invoice is issued at dispatch.',
-        ], ['label' => 'View receipt', 'url' => ShopInfo::siteUrl() . '/i/' . $o['invoiceCode']], 'Payment received for your ' . ShopInfo::brandName() . ' order ' . $o['orderNo']);
+        ], ['label' => 'View receipt', 'url' => ShopInfo::siteUrl() . '/account/orders'], 'Payment received for your ' . ShopInfo::brandName() . ' order ' . $o['orderNo']);
     }
 
     /** @param array<string,mixed> $o @return array{subject:string,text:string,html:string} */
@@ -72,7 +72,7 @@ final class EventTemplates
         return self::order($o, 'payment failed', 'Payment failed', [
             'Your payment for order ' . $o['orderNo'] . ' did not go through. If money was taken from your account, your bank returns it within a few days.',
             'You can try again from your cart.',
-        ], ['label' => 'Back to your cart', 'url' => ShopInfo::siteUrl() . '/cart'], 'Payment failed for your ' . ShopInfo::brandName() . ' order ' . $o['orderNo']);
+        ], ['label' => 'Back to your cart', 'url' => ShopInfo::siteUrl() . '/bag'], 'Payment failed for your ' . ShopInfo::brandName() . ' order ' . $o['orderNo']);
     }
 
     /** @param array<string,mixed> $o @return array{subject:string,text:string,html:string} */

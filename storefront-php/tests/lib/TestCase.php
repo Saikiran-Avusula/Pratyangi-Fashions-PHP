@@ -52,6 +52,7 @@ final class TestCase
 
     public function contains(string $needle, string $haystack, string $note = ''): void
     {
+        $haystack = preg_replace("/\.(js|css)\?v=[0-9a-f]{10}/", ".$1", $haystack); // asset URLs carry ?v=<hash> (View::asset); the tests name the files
         if (!str_contains($haystack, $needle)) {
             throw new \RuntimeException('expected text to contain ' . self::show($needle) . ($note !== '' ? ' (' . $note . ')' : ''));
         }

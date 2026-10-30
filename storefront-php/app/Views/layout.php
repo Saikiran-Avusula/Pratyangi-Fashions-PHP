@@ -11,14 +11,14 @@ $styles = $styles ?? ['1_e1s2q5g68a2.css', '31pkxlgg4o4yb.css', '3wh3hbs4o_ca8.c
 $scripts = $scripts ?? ['site.js'];
 $links = '';
 foreach ($styles as $style) {
-    $links .= '<link rel="stylesheet" href="/assets/css/' . View::e($style) . '"/>';
+    $links .= '<link rel="stylesheet" href="' . View::e(View::asset('/assets/css/' . $style)) . '"/>';
 }
 $tags = '';
 foreach (array_merge($scripts, in_array('cookies.js', $scripts, true) ? [] : ['cookies.js']) as $script) { // the cookie notice is on every page
-    $tags .= '<script defer src="/assets/' . View::e($script) . '"></script>';
+    $tags .= '<script defer src="' . View::e(View::asset('/assets/' . $script)) . '"></script>';
 }
 ?><!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/><title><?= View::e($title) ?></title><meta name="description" content="<?= View::e($description) ?>"/><?= ($noindex ?? false) ? '<meta name="robots" content="noindex"/>' : '' ?><link rel="icon" href="/assets/icon.svg" sizes="any" type="image/svg+xml"/><?= $links ?><link rel="stylesheet" href="/assets/site.css"/><?= $tags ?></head>
+<html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/><title><?= View::e($title) ?></title><meta name="description" content="<?= View::e($description) ?>"/><?= ($noindex ?? false) ? '<meta name="robots" content="noindex"/>' : '' ?><link rel="icon" href="/favicon.ico" sizes="32x32"/><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png"/><link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png"/><link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png"/><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"/><?= $links ?><link rel="stylesheet" href="<?= View::e(View::asset('/assets/site.css')) ?>"/><?= $tags ?></head>
 <body>
 <?= $content ?>
 <?php require __DIR__ . '/partials/cookie_bar.php'; ?></body></html>

@@ -82,6 +82,7 @@ return [
     // ---- shopping and payment: OFF on the first test round -----------------------------------------------------------------------------
     'PAYMENTS_ENABLED' => 'false',
     'CHECKOUT_ENABLED' => 'false',
+    'DEMO_UI' => 'false', // never 'true' in production (the app refuses to start); 'true' on a preview site shows the made-up preview screens
     'RAZORPAY_KEY_ID' => '',
     'RAZORPAY_KEY_SECRET' => '',
     'RAZORPAY_ALLOW_LIVE' => 'false',
@@ -107,6 +108,7 @@ return [
     'SHOP_GRIEVANCE_EMAIL' => 'grievance@pratyangi.com',
     'SHOP_GRIEVANCE_PHONE' => '',
     'SHOP_HOURS' => '9:00 AM - 5:00 PM, Monday to Saturday',
+    'SHOP_ANNOUNCEMENTS' => 'Authentic Handlooms|Handwoven by master artisans|Help on WhatsApp',
     'SHOP_FREE_SHIPPING_ABOVE' => '',
     'SHOP_SOCIAL_FACEBOOK' => '',
     'SHOP_SOCIAL_YOUTUBE' => '',

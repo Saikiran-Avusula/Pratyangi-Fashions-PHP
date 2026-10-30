@@ -9,6 +9,10 @@ DirectoryIndex index.php
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # www.<host> -> <host>, one 301, https, path and query kept (the query string is appended by Apache). Needs no special case for /errors or Directory Privacy.
+    RewriteCond %{HTTP_HOST} ^www\.(.+?)(:\d+)?$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L,NE]
+
     # always https (on the live server; localhost stays plain http for local runs)
     RewriteCond %{HTTPS} off
     RewriteCond %{HTTP:X-Forwarded-Proto} !https
@@ -32,9 +36,13 @@ DirectoryIndex index.php
     </FilesMatch>
 </IfModule>
 
-# pictures, styles and scripts may be kept by the browser for a day (they are versioned by hand: change the file name when you change a file)
+# styles and scripts are linked as name?v=<version> (View::asset): kept a year; without ?v= they are re-checked every visit (a stale site.css next to a new cookies.js left the cookie bar unstyled on a phone); pictures and fonts may be kept for a day
 <IfModule mod_headers.c>
-    <FilesMatch "\.(css|js|svg|png|jpe?g|webp|woff2?)$">
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "no-cache"
+        Header set Cache-Control "public, max-age=31536000, immutable" "expr=%{QUERY_STRING} =~ /(^|&)v=/"
+    </FilesMatch>
+    <FilesMatch "\.(svg|png|jpe?g|webp|woff2?)$">
         Header set Cache-Control "public, max-age=86400"
     </FilesMatch>
 </IfModule>

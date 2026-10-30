@@ -109,7 +109,7 @@ $t->test('every email: short subject, plain-text twin, special characters right 
     $t->contains('/account/orders', $c['html']);
     $r = EventTemplates::paymentReceipt($order);
     $t->contains('This is not a GST tax invoice. The tax invoice is issued at dispatch.', $r['text']);
-    $t->contains('/i/k3JdQ9xT2mWp7Z', $r['html']);
+    $t->contains('/account/orders', $r['html']);
     $t->contains('Your refund of ₹3,998.00', EventTemplates::cancelled($order)['text']);
     $t->contains('Courier', EventTemplates::shipped($order)['text']);
     $t->contains('1234567890', EventTemplates::shipped($order)['text']);

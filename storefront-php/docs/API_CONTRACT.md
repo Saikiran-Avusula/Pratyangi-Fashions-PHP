@@ -36,7 +36,7 @@ Only `message` is always present. `field` and `errors` appear on validation and 
 - The session is looked up on every `/api/v1` request; an unknown or expired token is treated as signed out (never an error by itself). Protected routes answer `401 {"message":"Please sign in to continue."}`.
 
 ### 1.5 CSRF
-- On `POST/PUT/PATCH/DELETE` under `/api/v1` the `Origin` header must exactly equal one of the `WEB_ORIGIN` values (trailing slash ignored). Otherwise `403 {"message":"This request did not come from the Pratyangi Fashions website."}`.
+- On `POST/PUT/PATCH/DELETE` under `/api/v1` the `Origin` header must exactly equal one of the `WEB_ORIGIN` values (trailing slash ignored). Otherwise `403 {"message":"Please open <first WEB_ORIGIN> and try again."}` (PHP wording; Node says "This request did not come from the Pratyangi Fashions website."). Also accepted: upper-case host, default port, and a same-site `Referer` when `Origin` is missing.
 - A missing `Origin` is refused. This check runs before the session lookup, so it comes before `401`.
 - The Razorpay webhook is mounted outside `/api/v1`'s router (before JSON parsing) and is exempt (Razorpay sends no Origin). It is authenticated by its HMAC signature instead.
 - No CSRF token. Protection = Origin allow-list + `SameSite=Lax` cookie.

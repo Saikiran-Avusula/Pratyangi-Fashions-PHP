@@ -106,6 +106,16 @@ $t->test('/soon and static assets', function () use ($t, $root): void {
     $t->same(200, $r->status());
     $t->same('image/webp', $r->header('Content-Type'));
     $t->same(200, $app->handle(Helpers::request('GET', '/assets/icon.svg'))->status());
+    // favicon files are real files in public/ (Apache serves them); the layout links each of them
+    $page = $app->handle(Helpers::request('GET', '/soon'))->body();
+    foreach (['favicon.ico' => '/favicon.ico', 'favicon-32.png' => '/favicon-32.png', 'icon-192.png' => '/icon-192.png', 'icon-512.png' => '/icon-512.png', 'apple-touch-icon.png' => '/apple-touch-icon.png'] as $file => $href) {
+        $t->same(true, is_file($root . '/public/' . $file) && filesize($root . '/public/' . $file) > 100, $file . ' exists');
+        $t->contains('href="' . $href . '"', $page, $href . ' is linked');
+    }
+    $t->same([32, 32], array_slice((array) getimagesize($root . '/public/favicon-32.png'), 0, 2));
+    $t->same([180, 180], array_slice((array) getimagesize($root . '/public/apple-touch-icon.png'), 0, 2));
+    $t->same([192, 192], array_slice((array) getimagesize($root . '/public/icon-192.png'), 0, 2));
+    $t->same([512, 512], array_slice((array) getimagesize($root . '/public/icon-512.png'), 0, 2));
     $t->same(200, $app->handle(Helpers::request('HEAD', '/assets/site.css'))->status());
 
     // site.js is the only JavaScript file served

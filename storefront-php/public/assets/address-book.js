@@ -14,6 +14,7 @@
   })();
   (function initAddressBook() {
     var checkoutPage = !!doc.querySelector('[data-pf-bag-page="checkout"]');
+    function syncType() { doc.querySelectorAll('[data-pf-type-label]').forEach(function (l) { l.setAttribute('aria-checked', l.classList.contains('mdI9xa_typeActive') ? 'true' : 'false'); }); } // the chips announce which one is chosen
     var modal = doc.querySelector('[data-pf-address-modal]');
     var openBtn = doc.querySelector('[data-pf-open-address]');
     var form = doc.querySelector('[data-pf-modal-form]');
@@ -54,6 +55,7 @@
       typeLabels.forEach(function (l) { l.classList.remove('mdI9xa_typeActive'); });
       var homeLabel = doc.querySelector('[data-pf-type-label="Home"]');
       if (homeLabel) homeLabel.classList.add('mdI9xa_typeActive');
+      syncType();
 
       if (editingData) {
         if (title) title.textContent = 'Edit Address';
@@ -79,16 +81,19 @@
           typeLabels.forEach(function (l) { l.classList.remove('mdI9xa_typeActive'); });
           var targetLabel = doc.querySelector('[data-pf-type-label="' + t + '"]');
           if (targetLabel) targetLabel.classList.add('mdI9xa_typeActive');
+          syncType();
         }
       } else {
         if (title) title.textContent = 'Add New Address';
       }
       modal.hidden = false;
+      if (win.PratyangiScroll) win.PratyangiScroll.lock(); // only the sheet scrolls
     }
 
     function closeModal() {
       if (!modal) return;
       modal.hidden = true;
+      if (win.PratyangiScroll) win.PratyangiScroll.unlock();
       clearErrors();
     }
 
@@ -130,6 +135,7 @@
         typeLabels.forEach(function (l) { l.classList.remove('mdI9xa_typeActive'); });
         var l = doc.querySelector('[data-pf-type-label="' + r.value + '"]');
         if (l) l.classList.add('mdI9xa_typeActive');
+        syncType();
       });
     });
 

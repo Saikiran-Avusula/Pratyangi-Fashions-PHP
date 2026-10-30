@@ -18,11 +18,41 @@ $t->test('csrf unit: exact origin, trailing slash ignored, missing refused, safe
     $csrf->check(Helpers::request('POST', '/x', ['Origin' => $O]));
     $csrf->check(Helpers::request('POST', '/x', ['Origin' => $O . '/']));
     $csrf->check(Helpers::request('GET', '/x'));
-    foreach ([null, '', 'http://evil.example', $O . '.evil.example', 'HTTP://LOCALHOST:3000', 'null'] as $bad) {
+    foreach ([null, '', 'http://evil.example', $O . '.evil.example', 'null', 'http://shop.example.com', 'https://shop.example.com:444'] as $bad) {
         $e = $t->throws(ApiException::class, fn () => $csrf->check(Helpers::request('DELETE', '/x', $bad === null ? [] : ['Origin' => $bad])));
         $t->same(403, $e->status);
-        $t->same('This request did not come from the Pratyangi Fashions website.', $e->getMessage());
+        $t->same('Please open ' . $O . ' and try again.', $e->getMessage());
     }
+});
+
+$t->test('csrf: upper-case host, default port :443/:80, and a same-site Referer when Origin is missing are accepted; Origin null and a foreign Referer are not', function () use ($t): void {
+    $csrf = new Csrf(['https://test.pratyangi.com/', 'http://localhost:3000']);
+    foreach ([['Origin' => 'HTTPS://Test.Pratyangi.com'], ['Origin' => 'https://test.pratyangi.com:443'], ['Origin' => 'https://test.pratyangi.com/'],
+        ['Origin' => 'http://localhost:3000'], ['Referer' => 'https://test.pratyangi.com/signup?x=1'], ['Referer' => 'https://TEST.pratyangi.com:443/signup']] as $headers) {
+        $csrf->check(Helpers::request('POST', '/x', $headers));
+    }
+    $csrf = new Csrf(['https://test.pratyangi.com:443']); // a WEB_ORIGIN written with the default port still matches
+    $csrf->check(Helpers::request('POST', '/x', ['Origin' => 'https://test.pratyangi.com']));
+    foreach ([['Origin' => 'null', 'Referer' => 'https://test.pratyangi.com/'], ['Referer' => 'https://evil.example/https://test.pratyangi.com'],
+        ['Referer' => 'https://test.pratyangi.com.evil.example/'], ['Referer' => 'not a url'], ['Origin' => 'http://test.pratyangi.com']] as $headers) {
+        $t->throws(ApiException::class, fn () => (new Csrf(['https://test.pratyangi.com']))->check(Helpers::request('POST', '/x', $headers)), json_encode($headers));
+    }
+});
+
+$t->test('csrf refusal is logged at WARNING with origin, referer host, host, scheme and allowed list, but no cookie or body', function () use ($t): void {
+    $lines = [];
+    $csrf = new Csrf(['https://test.pratyangi.com'], new \Pratyangi\Support\Logger('debug', static function (string $line) use (&$lines): void {
+        $lines[] = $line;
+    }));
+    $t->throws(ApiException::class, fn () => $csrf->check(Helpers::request('POST', '/x', [
+        'Origin' => 'https://www.pratyangi.com', 'Referer' => 'https://www.pratyangi.com/signup', 'Host' => 'test.pratyangi.com',
+        'X-Forwarded-Proto' => 'https', 'Cookie' => 'pf_session=SECRETVALUE',
+    ], '{"password":"SECRETBODY"}')));
+    $t->same(1, count($lines));
+    foreach (['warn', 'https://www.pratyangi.com', 'www.pratyangi.com', 'test.pratyangi.com', 'x_forwarded_proto', 'allowed'] as $needle) {
+        $t->contains($needle, strtolower($lines[0]) === '' ? '' : $lines[0], $needle);
+    }
+    $t->same(false, str_contains($lines[0], 'SECRET'), 'no cookie, no body');
 });
 
 $t->test('403 comes before 401 and before 404 on unsafe methods', function () use ($t, $app): void {

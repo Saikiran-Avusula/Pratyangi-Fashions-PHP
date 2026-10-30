@@ -96,6 +96,8 @@ return [
     // PAYMENTS_ENABLED opens the payment routes; CHECKOUT_ENABLED lets customers start an order. Cash on delivery does not exist yet.
     'PAYMENTS_ENABLED' => 'false',
     'CHECKOUT_ENABLED' => 'false',
+    // DEMO_UI: 'true' shows the mock preview screens (checkout steps 2 and 3, payment methods, membership, reviews) with made-up data. Never in production (the app refuses to start).
+    'DEMO_UI' => 'false',
     // Razorpay TEST keys only (rzp_test_...). A live key (rzp_live_) stops start-up unless APP_ENV=production and RAZORPAY_ALLOW_LIVE=true.
     'RAZORPAY_KEY_ID' => '',
     'RAZORPAY_KEY_SECRET' => '',
@@ -114,6 +116,8 @@ return [
     'SHOP_SUPPORT_EMAIL' => '',
     // For example: Mon-Sat 10:00-18:00 IST
     'SHOP_HOURS' => '',
+    // The rotating top-bar messages, separated by |. A shipping or discount promise appears only if you write it here (or set SHOP_FREE_SHIPPING_ABOVE).
+    'SHOP_ANNOUNCEMENTS' => 'Authentic Handlooms|Handwoven by master artisans|Help on WhatsApp',
     // Company identity number, 21 characters (for example U12345TG2020PTC123456). Shown in the footer, on /contact and in the emails.
     'SHOP_CIN' => '',
     // Shops & Establishments registration number. Shown on /contact only; empty = hidden.

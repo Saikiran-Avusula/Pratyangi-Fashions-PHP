@@ -52,7 +52,7 @@ $t->test('the offers boxes are never ticked, on sign-up (email and mobile) and i
         $dialog = View::render('partials/address_dialog', ['smsEnabled' => $sms]);
         $t->contains('<input type="checkbox" name="offers" value="1" data-pf-field="offers"/>', $dialog);
         $t->same(0, preg_match('/data-pf-field="offers"[^>]*checked|checked[^>]*data-pf-field="offers"/', $dialog), 'never pre-ticked');
-        $t->contains('<label class="mdI9xa_required" for="addr-phone">Mobile Number</label><div class="mdI9xa_phone"><span class="mdI9xa_country">+91</span><input type="text" id="addr-phone" name="phone" required', $dialog);
+        $t->contains('<label class="mdI9xa_required" for="addr-phone">Phone Number</label><div class="mdI9xa_phone"><span class="mdI9xa_country">+91</span><input type="text" id="addr-phone" name="phone" required', $dialog);
         $t->contains($sms ? 'We&#039;ll send a code to confirm this number when you place an order.' : 'We&#039;ll call this number for delivery.', $dialog);
         $t->ok(!str_contains($dialog, $sms ? 'call this number' : 'send a code'), 'only the note that applies');
     }

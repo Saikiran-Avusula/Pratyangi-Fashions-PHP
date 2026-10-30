@@ -21,8 +21,8 @@ $t->test('every error page: real status, HTML, noindex, no-store, no details', f
     }
     $t->contains('<h2>Page not found</h2>', ErrorPages::response(404)->body());
     $t->contains('<h2>Access denied</h2>', ErrorPages::response(403)->body());
-    $t->contains('action="/search"', ErrorPages::response(404)->body(), 'search box on the 404');
-    $t->ok(!str_contains(ErrorPages::response(403)->body(), 'action="/search"'));
+    $t->contains('class="pf_errSearch"', ErrorPages::response(404)->body(), 'search box on the 404');
+    $t->ok(!str_contains(ErrorPages::response(403)->body(), 'class="pf_errSearch"'));
     $t->same('60', ErrorPages::response(429)->header('Retry-After'));
 });
 
