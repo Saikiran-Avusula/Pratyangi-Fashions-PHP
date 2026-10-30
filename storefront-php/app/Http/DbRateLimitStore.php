@@ -23,6 +23,12 @@ final class DbRateLimitStore implements RateLimitStore
         return $hits === false ? 1 : (int) $hits;
     }
 
+    public function release(string $key, int $windowSeconds, int $now): void
+    {
+        $start = intdiv($now, $windowSeconds) * $windowSeconds;
+        ($this->pdo)()->prepare('UPDATE shop_rate_limits SET hits = hits - 1 WHERE bucket_key = ? AND window_start = ? AND hits > 0')->execute([$key, $start]);
+    }
+
     public function purge(int $olderThan): void
     {
         ($this->pdo)()->prepare('DELETE FROM shop_rate_limits WHERE window_start < ?')->execute([$olderThan]);

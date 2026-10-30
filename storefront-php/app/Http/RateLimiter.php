@@ -65,6 +65,30 @@ final class RateLimiter
     }
 
     /** The same count for any other subject than the client address (a fingerprint of a mobile number, for example). Hashed before it is stored. */
+    /** Gives back the hit consumeSubject() just counted (the code could not be sent, so the allowance stays). */
+    public function giveBack(string $bucket, string $subject): void
+    {
+        [, $window] = self::BUCKETS[$bucket];
+        try {
+            $this->store->release($bucket . ':' . hash('sha256', $subject), $window, (int) floor($this->clock->now()));
+        } catch (\Throwable $e) {
+            $this->logger?->exception('rate limit give-back failed', $e, 'warn');
+        }
+    }
+
+    /** "45 seconds", "12 minutes", "5 hours" (rounded up) for the countdown in a limit message. */
+    public static function wait(int $seconds): string
+    {
+        $seconds = max(1, $seconds);
+        if ($seconds < 120) {
+            return $seconds . ' second' . ($seconds === 1 ? '' : 's');
+        }
+        if ($seconds < 7200) {
+            return (int) ceil($seconds / 60) . ' minutes';
+        }
+        return (int) ceil($seconds / 3600) . ' hours';
+    }
+
     public function consumeSubject(string $bucket, string $subject, Context $context): void
     {
         [$limit, $window, $failOpen] = self::BUCKETS[$bucket];
@@ -93,7 +117,13 @@ final class RateLimiter
         $context->headers['RateLimit-Reset'] = (string) $reset;
         if ($hits > $limit) {
             $context->headers['Retry-After'] = (string) $reset;
-            throw new ApiException(429, self::MESSAGES[$bucket] ?? self::MESSAGE);
+            // the email and cooldown messages say how long to wait (the windows are fixed, so $reset is the time to the next one)
+            $message = match ($bucket) {
+                'otp_email' => 'Too many codes have been requested for this address today. Please try again in ' . self::wait($reset) . '.',
+                'code_cooldown' => 'Please wait ' . self::wait($reset) . ' before asking for another code.',
+                default => self::MESSAGES[$bucket] ?? self::MESSAGE,
+            };
+            throw new ApiException(429, $message);
         }
     }
 

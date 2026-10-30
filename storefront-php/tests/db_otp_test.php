@@ -468,7 +468,7 @@ $t->test('/account shows the stored mobile number; /checkout renders for a mobil
     $t->contains('data-pf-link="email"', $b, 'a mobile-only account can add an email');
     $t->ok(!str_contains($b, 'data-pf-link="mobile"'), 'it already has a mobile number');
     $t->ok(!str_contains($b, 'Please confirm your email address'), 'no email to confirm');
-    $t->contains('Member since ' . gmdate('M Y') . '</span><span>+919800000130</span>', $b, 'no empty email chip between the date and the number');
+    $t->contains('Since ' . gmdate('M Y') . '</span><span>+919800000130</span>', $b, 'no empty email chip between the date and the number');
     $checkout = $app->handle(Helpers::request('GET', '/checkout', ['Cookie' => $cookie]));
     $t->same(200, $checkout->status());
     $t->contains('Checkout', $checkout->body());

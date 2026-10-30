@@ -15,6 +15,9 @@ interface RateLimitStore
      */
     public function hit(string $key, int $windowSeconds, int $now): int;
 
+    /** Takes back one hit of the window that contains $now (a code that could not be sent must not use up the allowance). Never goes below 0. */
+    public function release(string $key, int $windowSeconds, int $now): void;
+
     /** Forgets windows that ended before $olderThan (unix seconds). */
     public function purge(int $olderThan): void;
 }

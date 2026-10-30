@@ -459,3 +459,109 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 /* ---- UI7a: an empty bag shows the shared empty state and nothing else: no title row, summary, coupon, recommendations or promises ---- */
 .BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) :is(.BpPmcW_titleRow, .BpPmcW_intro, .BpPmcW_summary, .BpPmcW_assurance, .BpPmcW_status, .BpPmcW_recommended, .OL4btW_section, .BpPmcW_continue) { display: none !important; }
 .BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_layout { display: grid; min-height: min(70vh, 560px); place-items: center; }
+
+/* ---- UI7a part 2: account overview (recent orders, wishlist strip) ---- */
+.pf_statLink { color: inherit; text-decoration: none; }
+.pf_acctOrders { margin: 0; padding: 0 20px 8px; list-style: none; }
+.pf_acctOrders li { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px 14px; align-items: center; padding: 14px 0; border-top: 1px solid #eadfc8; }
+.pf_acctOrders img { grid-row: span 2; width: 64px; height: 72px; object-fit: cover; border-radius: 2px; background: #fffbd0; }
+.pf_acctOrderMain, .pf_acctOrderState { display: grid; gap: 2px; min-width: 0; }
+.pf_acctOrderMain strong { font: 500 15px/1.4 var(--font-body, inherit); }
+.pf_acctOrders small { color: #5a5248; font: 400 13px/1.4 var(--font-body, inherit); }
+.pf_acctDot { display: inline-flex; align-items: center; gap: 6px; font: 500 14px/1.3 var(--font-body, inherit); color: #1b7f3b; }
+.pf_acctDot::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.pf_acctDotShipped { color: #c46a00; }
+.pf_acctDotPlaced { color: #5a5248; }
+.pf_acctOrderBtn { grid-column: 2; justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid #d9a441; border-radius: 4px; background: #fcf5e6; color: #8a4d00; font: 500 13px/1 var(--font-body, inherit); text-decoration: none; }
+@media (min-width: 768px) { .pf_acctOrders li { grid-template-columns: 64px minmax(0, 1.2fr) minmax(0, 1fr) auto; } .pf_acctOrders img { grid-row: auto; } .pf_acctOrderBtn { grid-column: auto; } }
+.pf_acctWishStrip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0 20px 20px; list-style: none; }
+.pf_acctWishStrip li { display: grid; gap: 4px; }
+.pf_acctWishStrip img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 4px; background: #fffbd0; }
+.pf_acctWishStrip span { color: var(--burgundy, #800020); font: 400 13px/1.3 var(--font-body, inherit); }
+.pf_acctWishStrip b { font: 600 13px/1.3 var(--font-body, inherit); }
+
+/* ---- UI7a part 2: listing on a phone (quick chips, Sort By | Filter bar, sort sheet, filter sheet) and round colour swatches ---- */
+._4HCqHa_colorChip.pf_swatch { width: 24px; height: 24px; padding: 0; border: 1px solid #cfcabe; border-radius: 50%; background: var(--sw, #cfcabe); font-size: 0; position: relative; }
+._4HCqHa_colorChip.pf_swatch::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+._4HCqHa_colorChip.pf_swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--burgundy, #800020); }
+._4HCqHa_colorChips:has(.pf_swatch) { gap: 10px; }
+.pf_lbar, .pf_qchips, .pf_sheetScrim, .pf_filterHead, .pf_filterFoot { display: none; }
+@media (max-width: 767px) {
+  .pf_qchips { display: flex; gap: 8px; margin: 0 -16px; padding: 4px 16px 12px; scroll-padding-left: 16px; overflow-x: auto; scrollbar-width: none; scroll-snap-type: x proximity; }
+  .pf_qchips::-webkit-scrollbar { display: none; }
+  .pf_qchip { appearance: none; flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border: 1px solid #d9d2c5; border-radius: 999px; background: #fff; color: #3b2b27; font: 400 14px/1 var(--font-body, inherit); white-space: nowrap; cursor: pointer; scroll-snap-align: start; }
+  .pf_qchip[aria-pressed="true"] { border-color: var(--burgundy, #800020); background: #fcf2f2; color: var(--burgundy, #800020); font-weight: 600; }
+  .pf_qdot { width: 14px; height: 14px; border: 1px solid #0003; border-radius: 50%; }
+  [data-pf="listing"] { padding-bottom: 72px; }
+  ._4HCqHa_sort { display: none; }
+  aside._4HCqHa_sidebar { display: none; }
+  .pf_lbar { position: fixed; left: 0; right: 0; bottom: var(--pf-cookie-h, 0px); z-index: 45; display: grid; grid-template-columns: 1fr 1fr; padding-bottom: env(safe-area-inset-bottom); background: #fff; border-top: 1px solid #eadfc8; box-shadow: 0 -4px 16px #0000001a; }
+  .pf_lbar button { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; border: 0; background: none; color: #222; font: 600 14px/1 var(--font-body, inherit); letter-spacing: 0.03em; text-transform: uppercase; cursor: pointer; }
+  .pf_lbar button + button { border-left: 1px solid #eadfc8; }
+  .pf_lcount { display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--burgundy, #800020); color: #fff; font: 600 11px/1 var(--font-body, inherit); }
+  .pf_lcount[hidden] { display: none; }
+  .pf_sheetScrim { position: fixed; inset: 0; z-index: 95; background: #1e130f9e; overscroll-behavior: contain; }
+  .pf_sheetScrim:not([hidden]) { display: block; }
+  .pf_sheet { position: absolute; left: 0; right: 0; bottom: 0; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; padding-bottom: max(12px, env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; background: #fff; }
+  .pf_sheet[hidden] { display: none; }
+  .pf_sheetHead, .pf_filterHead { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px 8px 20px; border-bottom: 1px solid #eadfc8; }
+  .pf_sheetHead h2, .pf_filterHead h2 { margin: 0; font: 600 18px/1.3 var(--font-display, Georgia, serif); color: #3b2b27; }
+  .pf_sheetX { appearance: none; width: 44px; height: 44px; border: 0; background: none; font-size: 28px; line-height: 1; color: #222; cursor: pointer; }
+  .pf_sortOpt { appearance: none; display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 52px; padding: 0 20px; border: 0; background: none; color: #222; font: 400 15px/1 var(--font-body, inherit); text-align: left; cursor: pointer; }
+  .pf_sortOpt[aria-checked="true"] { color: var(--burgundy, #800020); font-weight: 600; background: #fcf2f2; }
+  .pf_sortOpt[aria-checked="true"]::after { content: "✓"; }
+  body.pf_filterOpen .pf_sheetScrim { display: block; }
+  body.pf_filterOpen aside._4HCqHa_sidebar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 96; display: flex; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain; margin: 0; padding: 0 20px 88px; border: 0; border-radius: 16px 16px 0 0; background: #fff; }
+  body.pf_filterOpen .pf_filterHead { display: flex; position: sticky; top: 0; z-index: 2; margin: 0 -20px; background: #fff; }
+  body.pf_filterOpen .pf_filterFoot { position: fixed; left: 0; right: 0; bottom: 0; z-index: 97; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px 20px max(12px, env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid #eadfc8; }
+  .pf_filterClear, .pf_filterApply { appearance: none; min-height: 48px; border-radius: 4px; font: 600 14px/1 var(--font-body, inherit); cursor: pointer; }
+  .pf_filterClear { border: 1px solid var(--burgundy, #800020); background: #fff; color: var(--burgundy, #800020); }
+  .pf_filterApply { border: 0; background: var(--burgundy, #800020); color: #fff; }
+}
+@media (max-width: 767px) {
+  /* the bag's sticky bar: the total on the left, Proceed to Checkout beside it */
+  .BpPmcW_checkout[data-total]:not(:disabled) { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 0 16px; }
+  .BpPmcW_checkout[data-total]:not(:disabled)::before { content: attr(data-total); margin-right: auto; font-weight: 700; font-size: 16px; }
+}
+/* the wishlist beside the account sidebar (signed in), or with a sign-in line (signed out) */
+.pf_wishLayout { margin-top: 8px; }
+.pf_wishSignIn { margin: 8px 0 24px; padding: 12px 16px; border: 1px solid #eadfc8; border-radius: 4px; background: #fcf5e6; color: #3b2b27; font: 400 14px/1.5 var(--font-body, inherit); }
+.pf_wishSignIn a { color: var(--burgundy, #800020); font-weight: 600; }
+/* account overview as Figma: the stat cards share one row, and the addresses have their own page (no panel on the overview) */
+.P71-SG_stats.P71-SG_statsFew { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.pnvDaq_content:has(.P71-SG_stats) > #addresses { display: none; }
+
+/* ---- UI7a part 3: header. Up to 425px: menu + the FULL logo on the left (its text scales with the width), search / wishlist / bag / account as one evenly spaced group on the right.
+   From 426px: the logo sits in the true centre (its name shows from 490px, where both sides can still hold the icons). ---- */
+@media (max-width: 425px) {
+  .pSCCwa_headerInner { display: flex; align-items: center; gap: 4px; padding: 0 4px; }
+  .pSCCwa_shopToggle { flex: none; width: 44px; min-width: 44px; padding: 0; }
+  .pSCCwa_brand { flex: 0 1 auto; min-width: 0; margin: 0 12px 0 0; gap: 4px; }
+  .pSCCwa_brandLogo { flex: none; width: 30px; height: 30px; }
+  .pSCCwa_brandText { display: grid !important; min-width: 0; gap: 1px; }
+  .pSCCwa_brandName { font-size: clamp(5px, calc((100vw - 278px) / 11.5), 13px); letter-spacing: 0.03em; white-space: nowrap; }
+  .pSCCwa_brandTagline { font-size: clamp(4px, calc((100vw - 278px) / 15.5), 9px); letter-spacing: 0.02em; white-space: nowrap; }
+  .pSCCwa_headerActions { flex: none; margin-left: auto; gap: 0; }
+  .pSCCwa_headerActions > .pSCCwa_searchButton, .pSCCwa_headerActions > .pSCCwa_iconButton, .pSCCwa_headerActions > .pSCCwa_accountLink { flex: none; width: 44px; min-width: 44px; padding: 0; justify-content: center; }
+  .pSCCwa_headerActions .pSCCwa_accountText { display: none; }
+}
+@media (min-width: 426px) {
+  .pSCCwa_headerInner { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .pSCCwa_shopToggle { justify-self: start; }
+  .pSCCwa_brand { justify-self: center; margin: 0; }
+  .pSCCwa_headerActions { justify-self: end; margin-left: 0; gap: 0; }
+  .pSCCwa_headerActions .pSCCwa_accountText { display: none; }
+}
+@media (min-width: 426px) and (max-width: 700px) { .pSCCwa_headerInner { padding: 0 8px; gap: 8px; } }
+@media (min-width: 426px) and (max-width: 489px) { .pSCCwa_brandText { display: none !important; } }
+@media (min-width: 490px) and (max-width: 700px) { .pSCCwa_brandText { display: grid !important; } .pSCCwa_brandName { font-size: 11px; } .pSCCwa_brandTagline { font-size: 8px; } }
+@media (min-width: 1024px) { .pSCCwa_headerActions .pSCCwa_accountText { display: grid; } }
+/* the search starts under the rotating top bar (which stays visible and keeps rotating) */
+@media (max-width: 1023px) {
+  .pSCCwa_scrim[data-pf="search-scrim"] { top: var(--pf-bar-b, 0px); }
+  .pSCCwa_dialog.pf_sd { height: calc(100dvh - var(--pf-bar-b, 0px)); }
+}
+/* profile card (Figma): the photo with a small camera badge (only when there is a Google photo to change) */
+.pf_avatarWrap { position: relative; display: inline-block; flex: none; }
+.pf_camBadge { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #fff; color: #3b2b27; box-shadow: 0 1px 4px #0003; }
+.pf_camBadge::after { content: ""; position: absolute; inset: -8px; }

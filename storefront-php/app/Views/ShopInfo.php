@@ -25,6 +25,18 @@ final class ShopInfo
         self::$brandDir = $brandDir;
     }
 
+    /** The test path of the Google sign-in script, or null (Google's own address is used). */
+    public static function googleScriptPath(): ?string
+    {
+        return self::$config?->googleScriptPath;
+    }
+
+    /** DEMO_UI: the preview screens and rows are on. */
+    public static function demoUi(): bool
+    {
+        return self::$config?->demoUi ?? false;
+    }
+
     /** The footer shows the payment-method row only while PAYMENTS_ENABLED=true. */
     public static function paymentsEnabled(): bool
     {

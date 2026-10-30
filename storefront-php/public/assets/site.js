@@ -654,6 +654,8 @@
       setMenu(false);
       var bar = header.el || qs('[data-pf="header"]');
       dialog.style.setProperty('--pf-sd-top', (bar ? Math.max(0, Math.round(bar.getBoundingClientRect().bottom)) : 0) + 'px');
+      var topbar = qs('.pf_topbar');
+      scrim.style.setProperty('--pf-bar-b', (topbar ? Math.max(0, Math.round(topbar.getBoundingClientRect().bottom)) : 0) + 'px');
       scrim.hidden = false;
       lockScroll();
       if (input) { input.placeholder = PLACEHOLDERS[phIndex]; showIdle(); input.focus(); startPlaceholder(); }
@@ -1161,6 +1163,7 @@
     avatarFallback();
     retry();
     initHeader();
+    qsa('[data-pf="wish-stat"]').forEach(function (n) { n.textContent = String(wishRead().length); });
     announce();
     categories();
     tryOn();

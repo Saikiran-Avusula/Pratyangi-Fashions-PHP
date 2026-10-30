@@ -139,7 +139,20 @@ final class DemoData
         return [$row(1, $lorem, 2), $row(2, 'Lorem ipsum dolor sit amet consectetur.', 5), $row(3, substr($lorem, 0, 135) . ' etiam.', 1), $row(4, 'Lovely drape and colour.', 0)];
     }
 
-    /** Replaced by: delivered order lines with no review yet. @return list<array<string,mixed>> */
+    /** Replaced by: GET /orders (the customer's orders; a later phase). Three states: delivered, shipped (can be tracked), placed. @return list<array<string,mixed>> */
+    public static function orders(): array
+    {
+        $row = static fn (string $no, string $sku, string $name, string $variant, string $placed, string $status, string $note, bool $track): array => ['orderNo' => $no, 'sku' => $sku, 'name' => $name, 'variant' => $variant,
+            'image' => ProductImage::PLACEHOLDER, 'placed' => $placed, 'status' => $status, 'note' => $note, 'canTrack' => $track];
+        return [
+            $row('PF12345', 'DEMO-001', 'Kanchipuram Silk Saree', 'Maroon with Gold Zari', '2 Oct 2026', 'Delivered', 'on 5 Oct 2026', false),
+            $row('PF12346', 'DEMO-002', 'Banarasi Georgette Saree', 'Rose Pink with Silver Zari', '22 Sep 2026', 'Shipped', 'Expected by 8 Oct 2026', true),
+            $row('PF12347', 'DEMO-003', 'Chanderi Cotton Silk Saree', 'Emerald Green with Gold Border', '29 Oct 2026', 'Placed', 'We are preparing your order', false),
+        ];
+    }
+
+    /** Replaced by: delivered order lines with no review yet.
+ @return list<array<string,mixed>> */
     public static function pendingReviews(): array
     {
         return [['id' => 5, 'sku' => 'DEMO-002', 'name' => 'Banarasi Georgette Saree', 'variant' => 'Rose Pink with Silver Zari', 'image' => ProductImage::PLACEHOLDER, 'date' => 'Delivered 2 Oct 2027']];

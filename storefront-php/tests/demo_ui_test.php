@@ -38,6 +38,20 @@ $t->test('DEMO_UI is off by default and refused in production', function () use 
     }
 });
 
+$t->test('GOOGLE_SCRIPT_PATH (tests only): a same-site path, never a URL, never in production', function () use ($t): void {
+    $t->same('/__gsi.js', Helpers::config(['GOOGLE_SCRIPT_PATH' => '/__gsi.js'])->googleScriptPath);
+    $t->same(null, Helpers::config()->googleScriptPath);
+    foreach (['https://evil.example/x.js', '//evil.example/x.js', 'x.js', '/a/b.js'] as $bad) {
+        $t->throws(ConfigException::class, static fn () => Helpers::config(['GOOGLE_SCRIPT_PATH' => $bad]), $bad);
+    }
+    try {
+        new Config(['APP_ENV' => 'production', 'GOOGLE_SCRIPT_PATH' => '/__gsi.js']);
+        throw new RuntimeException('production + GOOGLE_SCRIPT_PATH must not start');
+    } catch (ConfigException $e) {
+        $t->contains('GOOGLE_SCRIPT_PATH', $e->getMessage());
+    }
+});
+
 $t->test('DEMO_UI=false: the preview pages are ordinary 404s and the account menu has no preview rows', function () use ($t, $app, $paths, $cookie): void {
     $a = $app(false);
     foreach ($paths as $p) {

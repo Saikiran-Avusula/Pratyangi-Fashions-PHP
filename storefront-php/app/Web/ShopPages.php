@@ -47,7 +47,7 @@ final class ShopPages
             'checkoutHref' => $row === null ? '/login?next=/checkout' : '/checkout',
             'recommended' => $recommended,
         ]);
-        return $this->page($request, 'Your Bag | Pratyangi Fashions', 'Review the handwoven sarees in your Pratyangi Fashions bag.', $body, ['site.js', 'bag.js', 'bag-page.js'], $recommended === null);
+        return $this->page($request, 'My Bag | Pratyangi Fashions', 'Review the handwoven sarees in your Pratyangi Fashions bag.', $body, ['site.js', 'bag.js', 'bag-page.js'], $recommended === null);
     }
 
     public function checkout(Request $request): Response

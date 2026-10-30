@@ -893,7 +893,8 @@
     }
     function hideSigning() { if (!signing) return; signing.remove(); signing = null; if (win.PratyangiScroll) win.PratyangiScroll.unlock(); }
     var script = doc.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
+    var testSrc = box.getAttribute('data-script-src') || ''; // set only by a test setup (GOOGLE_SCRIPT_PATH): a same-site path, never another host
+    script.src = /^\/[A-Za-z0-9._-]+$/.test(testSrc) ? testSrc : 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.onerror = function () { box.hidden = true; }; // Google cannot be reached: the email form is still there
     script.onload = function () {

@@ -94,7 +94,7 @@ final class AuthHtml
     /** The "Continue with Google" block above the forms and tabs (auth.js loads Google's script and draws its button into [data-pf=google-button]). Only built when GOOGLE_CLIENT_ID is set. */
     public static function google(string $clientId, bool $signup): string
     {
-        return '<div class="pf_google" data-pf="google" data-client-id="' . View::e($clientId) . '"><div class="pf_googleButton" data-pf="google-button"></div>'
+        return '<div class="pf_google" data-pf="google" data-client-id="' . View::e($clientId) . '"' . (\Pratyangi\Views\ShopInfo::googleScriptPath() !== null ? ' data-script-src="' . View::e(\Pratyangi\Views\ShopInfo::googleScriptPath()) . '"' : '') . '><div class="pf_googleButton" data-pf="google-button"></div>'
             . '<p class="neurva_error" role="alert" data-pf="google-error" hidden></p>'
             . ($signup ? '<p class="pf_googleNote">By continuing with Google you agree to our <a href="/terms">Terms &amp; Conditions</a> and <a href="/privacy">Privacy Policy</a>.</p>' : '') . '<p class="pf_googleOr"><span>or</span></p></div>';
     }

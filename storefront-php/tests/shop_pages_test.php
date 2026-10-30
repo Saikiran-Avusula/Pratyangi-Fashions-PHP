@@ -60,8 +60,8 @@ $t->test('/bag signed out: empty-bag frame in the Node markup, sign-in checkout 
     $t->same('text/html; charset=utf-8', $r->header('Content-Type'));
     $t->same(false, $r->hasHeader('Cache-Control'), 'no session cookie: cacheable like the other pages');
     $b = $r->body();
-    foreach (['<title>Your Bag | Pratyangi Fashions</title>', '<main class="BpPmcW_page" data-pf-bag-page="bag" data-pf-image-base="" data-checkout-href="/login?next=/checkout">',
-        '<section class="BpPmcW_bag" aria-labelledby="bag-title">', '<h1 id="bag-title">Your Bag <span data-pf="title-count">(0 items)</span></h1>',
+    foreach (['<title>My Bag | Pratyangi Fashions</title>', '<main class="BpPmcW_page" data-pf-bag-page="bag" data-pf-image-base="" data-checkout-href="/login?next=/checkout">',
+        '<section class="BpPmcW_bag" aria-labelledby="bag-title">', '<h1 id="bag-title">My Bag <span data-pf="title-count">(0 items)</span></h1>',
         '<a class="BpPmcW_continue" href="/new-arrivals">', 'data-pf="bag-lead"></p>', '<div class="BpPmcW_items" data-pf="bag-items"></div>',
         '<h2>Order Summary</h2>', '<dd data-pf="subtotal">Rs. 0.00</dd>', '<dd>Confirmed by the shop</dd>', '<strong data-pf="total">Rs. 0.00</strong>',
         'Delivery charges are not included.', 'class="BpPmcW_checkout" data-pf="checkout-slot" disabled=""', 'Online payment is not available yet', 'Coupons are not available yet.',
@@ -170,7 +170,7 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
     foreach (['<title>My Account | Pratyangi Fashions</title>', '<div class="pnvDaq_page">', '<main class="pnvDaq_main pf_menuOn">', '<h1>My Account</h1>', 'Manage your orders, addresses and more',
         '<a class="pnvDaq_navItem pnvDaq_navActive" aria-current="page" href="/account">', '<span>Overview</span>', '<span>My Orders</span>', '<span>Help &amp; Support</span>',
         '<button type="button" class="pnvDaq_logout" data-pf="logout">', 'Logout</button>', '<h2>Hello, asha</h2>', 'Welcome to Pratyangi Fashions',
-        '<span>Member since Oct 2026</span>', '<span>asha@example.com</span>', '<strong>0</strong>Total orders', '<strong>0</strong>Saved Addresses',
+        '<span>Since Oct 2026</span>', '<span>asha@example.com</span>', '<strong>0</strong>Total orders', '<strong>0</strong>Saved Addresses',
         'id="addresses" data-pf="addresses-panel"', '<h2>Saved Addresses</h2>', '<h2>Recent Orders</h2>',
         '<p>No orders yet.</p>', 'href="/new-arrivals">Start shopping', '<h2>No saved addresses yet.</h2>', 'data-pf-open-address>+ Add address</button>', 'data-pf-address-modal'] as $needle) {
         $t->contains($needle, $b, $needle);
@@ -184,11 +184,11 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
     }
     $t->contains('<div class="pf_topbar"><div class="pf_ann" data-pf="announce"><p>Authentic Handlooms</p><p>Handwoven by master artisans</p><p>Help on WhatsApp</p></div><p class="pf_topbarLinks"><a href="/contact">Contact</a></p></div>', $b, 'the one top bar, with a link only to a page that exists');
     $t->same(1, substr_count($b, 'pf_topbar"'), 'one top bar');
-    $t->same(2, substr_count($b, 'P71-SG_statOrders'), 'both stat cards share one style');
+    $t->same(3, substr_count($b, 'P71-SG_statOrders'), 'the three stat cards (orders, wishlist, addresses) share one style');
     $t->same(1, substr_count($b, 'data-pf-open-address'), 'one Add address button (empty state)');
     $t->contains('href="/account/addresses"', $b, 'Addresses row has its own page');
     $t->ok(!str_contains($b, 'Please confirm your email address'), 'verified: no notice');
-    $t->same(1, preg_match('#<div class="P71-SG_profileMeta"><span>Member since Oct 2026</span><span>asha@example.com</span></div>#', $b), 'no mobile line');
+    $t->same(1, preg_match('#<div class="P71-SG_profileMeta"><span>Since Oct 2026</span><span>asha@example.com</span></div>#', $b), 'no mobile line');
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/offers.js"></script><script defer src="/assets/address-book.js"></script><script defer src="/assets/account.js"></script><script defer src="/assets/cookies.js"></script>', $b);
     $noInline($t, $b, 5, '/account');
     $t->same('private, no-store', $r->header('Cache-Control'));
@@ -207,7 +207,7 @@ $t->test('/account: mobile shown when stored, verify notice when the email is no
     $t->ok(!str_contains($b, 'pf_verifyHint'), 'and then no extra link');
     $verified = $pages(array_merge($row, ['email_verified_at' => '2026-10-03 08:05:00']))->account($get('/account?verify=1', $cookie))->body();
     $t->ok(!str_contains($verified, 'Verify your email'), 'a verified email never gets the banner');
-    $t->ok(!str_contains($b, 'Member since'), 'an unreadable date shows no "Member since"');
+    $t->ok(!str_contains($b, '<span>Since '), 'an unreadable date shows no "Since"');
     $noInline($t, $b, 5, 'hostile account');
 });
 

@@ -266,6 +266,10 @@ $t->test('rate limits: per number 5 a day with its own message, per address 10 a
             $this->keys[] = $key;
             return 1;
         }
+        public function release(string $key, int $windowSeconds, int $now): void
+        {
+        }
+
         public function purge(int $olderThan): void
         {
             $this->purgedBefore = $olderThan;

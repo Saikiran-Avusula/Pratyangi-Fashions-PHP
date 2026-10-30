@@ -67,8 +67,17 @@
       root.style.setProperty('--pf-cookie-h', bar.hidden ? '0px' : bar.offsetHeight + 'px');
     }
 
+    // the open Manage panel is tall: the page behind it is pinned while it is open, and only the bar scrolls
+    var locked = false;
+    function lock(on) {
+      if (!win.PratyangiScroll || on === locked) { return; }
+      locked = on;
+      if (on) { win.PratyangiScroll.lock(); } else { win.PratyangiScroll.unlock(); }
+    }
+
     function showPanel(on) {
       panel.hidden = !on;
+      lock(on);
       manage.setAttribute('aria-expanded', on ? 'true' : 'false');
       measure();
     }
@@ -83,6 +92,7 @@
     }
 
     function close() {
+      lock(false);
       bar.hidden = true;
       measure();
       if (opener && opener.focus) { opener.focus(); }

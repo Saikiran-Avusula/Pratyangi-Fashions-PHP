@@ -97,6 +97,13 @@ final class OtpService
             'expiresIn' => Otp::TTL_SECONDS,
         ];
 
+        // a code that is not delivered must not use up the allowance (a mail server that is down would otherwise lock the address out for the day)
+        $giveBack = function () use ($purpose, $channel, $fingerprint): void {
+            if ($purpose === 'reset') {
+                $this->limiter->giveBack('code_cooldown', $fingerprint);
+            }
+            $this->limiter->giveBack($channel === 'mobile' ? 'otp_mobile' : 'otp_email', $fingerprint);
+        };
         $code = Otp::newCode();
         $hash = Otp::hashFor($this->pepper, $channel, $purpose, $target, $code);
         if (!$deliver) {
@@ -107,6 +114,7 @@ final class OtpService
             $this->deliver($channel, $purpose, $target, $code, $customerId);
         } catch (ApiException $e) {
             $this->codes->delete($id);
+            $giveBack();
             $this->logger?->channel('auth')->warn('otp request rejected', [
                 'channel' => $channel,
                 'reason' => 'gateway_failure',
@@ -117,6 +125,7 @@ final class OtpService
         } catch (\Throwable $e) {
             // the code was never delivered, so it must not stay usable (the customer's earlier code still is); the account is untouched either way
             $this->codes->delete($id);
+            $giveBack();
             $this->logger?->channel('auth')->warn('otp request rejected', [
                 'channel' => $channel,
                 'reason' => 'gateway_failure',

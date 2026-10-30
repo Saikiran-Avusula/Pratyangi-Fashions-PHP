@@ -73,6 +73,10 @@ $t->test('a failing store: catalogue fails open, account buckets fail closed', f
             throw new RuntimeException('down');
         }
 
+        public function release(string $key, int $windowSeconds, int $now): void
+        {
+        }
+
         public function purge(int $olderThan): void
         {
         }

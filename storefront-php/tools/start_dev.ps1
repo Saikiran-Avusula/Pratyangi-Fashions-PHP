@@ -3,6 +3,9 @@
 #   2. the scratch ERP on 127.0.0.1:8095              (php -S on the scratch copy flow-test\erp\public; the copy is only read)
 #   3. this shop on http://127.0.0.1:8100             (php -S, settings from config.dev.php = your config.local.php + the local test setup)
 # Then it asks the scratch ERP whether the two keys really work. Prints no key, password or value.  Stop everything with tools\stop_dev.ps1.
+# Mail: MAIL_MODE comes from config.local.php (smtp = real mail to real inboxes). -LogMail writes mails to storage\logs instead. SMS is always in log mode here.
+# The last lines say which mode is active. A shop that is already running keeps its old mode: run tools\stop_dev.ps1, then start again.
+param([switch]$LogMail)
 . 'E:\Testing fashion store\flow-test\scripts\lib.ps1'
 $ErrorActionPreference = 'Stop'
 $project = Split-Path -Parent $PSScriptRoot
@@ -23,7 +26,7 @@ $tables = Invoke-FlowMysql "SELECT COUNT(*) FROM information_schema.TABLES WHERE
 if ([int]($tables | Select-Object -First 1) -lt 2) { "MySQL   : the shop tables are missing in $shopDb. Run  tools\run_db.ps1  once; it creates them." }
 
 # ---- settings for the dev server (always rewritten: cheap, and it follows config.local.php)
-& (Join-Path $PSScriptRoot 'dev_config.ps1')
+& (Join-Path $PSScriptRoot 'dev_config.ps1') -LogMail:$LogMail
 
 # ---- 2. scratch ERP 8095 (its own window; closing it stops the ERP)
 if (Test-FlowPort $ErpPort) { "ERP     : already running on 127.0.0.1:$ErpPort, skipped" }
@@ -50,4 +53,8 @@ else {
 # ---- the keys: does the scratch ERP accept ERP_CATALOG_KEY and ERP_ORDER_KEY?
 & (Join-Path $PSScriptRoot 'dev_config.ps1') -Check
 ''
-"Open http://127.0.0.1:$shopPort   |   stop with tools\stop_dev.ps1   |   mail and SMS are in log mode (storage\logs)"
+$env:PF_CONFIG = Join-Path $project 'config.dev.php'
+try { $mailMode = & $Php -r "require '$($project.Replace('\','/'))/app/bootstrap.php'; echo Pratyangi\Config::load()->mailMode;" } finally { Remove-Item Env:\PF_CONFIG -ErrorAction SilentlyContinue }
+"Mail mode : $mailMode" + $(if ($mailMode -eq 'smtp') { '  (real e-mail: codes and receipts reach real inboxes)' } else { '  (log: mails are written to storage\logs, nothing is sent; start without -LogMail and set MAIL_MODE=smtp in config.local.php to send)' })
+'SMS mode  : log (never sends on the dev server)'
+"Open http://127.0.0.1:$shopPort   |   stop with tools\stop_dev.ps1"

@@ -2,7 +2,7 @@
 #   tools\dev_config.ps1          writes config.dev.php: your config.local.php with the local test setup laid over it (MySQL 3399, scratch ERP 8095 with ITS keys,
 #                                 SMS in log mode; MAIL_MODE comes from config.local.php (real SMTP if it says smtp)). config.local.php itself is never changed.
 #   tools\dev_config.ps1 -Check   asks the running scratch ERP: does ERP_CATALOG_KEY open the catalogue, does ERP_ORDER_KEY open orders (and not the other way round)?
-param([switch]$Check)
+param([switch]$Check, [switch]$LogMail)
 . 'E:\Testing fashion store\flow-test\scripts\lib.ps1'
 $ErrorActionPreference = 'Stop'
 $project = Split-Path -Parent $PSScriptRoot
@@ -29,6 +29,7 @@ if (-not $Check) {
     "    'ERP_CATALOG_KEY' => $(& $q $catalogueKey),", "    'ERP_ORDER_KEY' => $(& $q $orderKey),",
     "    'ERP_WAREHOUSE' => 'Main Godown',", "    'CATALOG_CACHE_SECONDS' => '10',",
     ']);')
+  if ($LogMail) { $i = [array]::IndexOf($lines, "    'SMS_MODE' => 'log',"); $lines = @($lines[0..$i]) + "    'MAIL_MODE' => 'log'," + @($lines[($i + 1)..($lines.Count - 1)]) } # -LogMail: nothing is sent
   Set-Content -LiteralPath $out -Value $lines -Encoding ascii
   & $Php -l $out | Out-Null; if ($LASTEXITCODE -ne 0) { throw 'config.dev.php has a syntax error' }
   $env:PF_CONFIG = $out

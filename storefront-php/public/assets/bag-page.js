@@ -538,6 +538,7 @@
         next.disabled = true;
       }
       next.setAttribute('data-pf', 'checkout-slot');
+      next.setAttribute('data-total', formatRs(view.totalPaise / 100)); // the phone's sticky bar shows the total beside the button text
       next.appendChild(figmaImg('checkout-arrow.svg', 27));
       slot.parentNode.replaceChild(next, slot);
     }

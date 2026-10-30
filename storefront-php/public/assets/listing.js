@@ -47,6 +47,7 @@
       el: el,
       index: index,
       price: parseFloat(el.getAttribute('data-price')),
+      mrp: parseFloat(el.getAttribute('data-qv-mrp')) || 0,
       category: el.getAttribute('data-category') || '',
       fabric: el.getAttribute('data-fabric') || '',
       color: el.getAttribute('data-color') || '',
@@ -71,6 +72,9 @@
 
   var lastOrder = '';
   var statusLine = null;
+
+  /** The share of the MRP that is taken off (0 when there is no MRP above the price). */
+  function off(card) { return card.mrp > card.price ? (card.mrp - card.price) / card.mrp : 0; }
 
   /** 100000 -> "₹1,00,000" (Indian grouping, like toLocaleString("en-IN")). */
   function inr(value) {
@@ -142,6 +146,7 @@
     var filtered = cards.filter(matches);
     if (state.sort === 'price-asc') filtered.sort(function (a, b) { return a.price - b.price || a.index - b.index; });
     else if (state.sort === 'price-desc') filtered.sort(function (a, b) { return b.price - a.price || a.index - b.index; });
+    else if (state.sort === 'discount') filtered.sort(function (a, b) { return off(b) - off(a) || a.index - b.index; });
 
     var totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
     var current = Math.min(state.page, totalPages);
@@ -199,6 +204,7 @@
 
     var filtersClear = qs('[data-pf="filters"] > [data-pf="clear"]');
     if (filtersClear) filtersClear.hidden = !hasFilters();
+    syncMobile();
   }
 
   /** A change of any filter or the sort goes back to page 1 (the web's `update`). */
@@ -296,5 +302,155 @@
     statusLine.textContent = detail.ok ? 'Added to your bag.' : (detail.message || '');
   });
 
+  /* ---- phone controls (under 768px; the CSS hides them above): quick chips under the title, a bottom bar "Sort By | Filter", a sort sheet, and the
+     filters of the sidebar shown as a bottom sheet. They drive the same state as the desktop controls, so nothing is filtered twice. ---- */
+  var COLORS = { maroon: '#800020', red: '#c8102e', pink: '#ec6fa3', 'rose pink': '#e8a0b4', orange: '#f58a00', yellow: '#f2c230', mustard: '#d19a1a', gold: '#c9a227', green: '#2e8b57', 'emerald green': '#0f7a4f',
+    olive: '#6b7a2a', teal: '#14807d', blue: '#2a5fc9', navy: '#1c2b5a', 'sky blue': '#6fb4e6', 'peacock blue': '#126b86', purple: '#7a3fa0', lavender: '#b79ad6', wine: '#5d1030', magenta: '#c2188f',
+    white: '#ffffff', ivory: '#f6f0dc', cream: '#f3e9cf', beige: '#d9c7a3', grey: '#8a8a8a', black: '#1a1a1a', peach: '#f6b99a', indigo: '#3b3b98' };
+  function colorOf(name) { return COLORS[String(name).toLowerCase()] || '#cfcabe'; }
+  function node(tag, className, text) { var n = doc.createElement(tag); if (className) n.className = className; if (text) n.textContent = text; return n; }
+  var SORTS = [['featured', 'Newest'], ['price-asc', 'Price: Low to High'], ['price-desc', 'Price: High to Low'], ['discount', 'Discount']];
+  var sortOptions = [];
+  var barSort = null, barFilter = null, filterCount = null, quickStock = null, quickColors = [];
+  var openSheet = null;
+
+  if (sortSelect && !qs('option[value="discount"]', sortSelect)) { var opt = node('option', '', 'Discount'); opt.value = 'discount'; sortSelect.appendChild(opt); }
+  // colour chips become round swatches (the name stays as the accessible label)
+  colorChips.forEach(function (chip) {
+    var name = chip.getAttribute('data-value') || chip.textContent;
+    chip.classList.add('pf_swatch');
+    chip.setAttribute('aria-label', name);
+    chip.title = name;
+    chip.style.setProperty('--sw', colorOf(name));
+  });
+
+  function activeCount() {
+    return state.fabrics.length + state.colors.length + (state.inStock ? 1 : 0) + (state.low !== min || state.high !== max ? 1 : 0) + (state.category ? 1 : 0);
+  }
+  function closeSheet() {
+    if (!openSheet) return;
+    openSheet.scrim.hidden = true;
+    if (openSheet.sheet) openSheet.sheet.hidden = true;
+    doc.body.classList.remove('pf_filterOpen');
+    if (win.PratyangiScroll) win.PratyangiScroll.unlock();
+    var back = openSheet.opener;
+    openSheet = null;
+    if (back) back.focus();
+  }
+  function show(which, opener) {
+    closeSheet();
+    openSheet = { scrim: scrim, sheet: which === 'sort' ? sortSheet : null, opener: opener };
+    scrim.hidden = false;
+    if (which === 'sort') sortSheet.hidden = false;
+    else {
+      var panel = qs('[data-pf="filters"]'), toggleBtn = qs('[data-pf="filters-toggle"]');
+      if (panel) panel.hidden = false;
+      if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+      doc.body.classList.add('pf_filterOpen');
+    }
+    if (win.PratyangiScroll) win.PratyangiScroll.lock();
+  }
+
+  var scrim = node('div', 'pf_sheetScrim');
+  scrim.hidden = true;
+  scrim.addEventListener('mousedown', function (event) { if (event.target === scrim) closeSheet(); });
+  var sortSheet = node('div', 'pf_sheet pf_sortSheet');
+  sortSheet.hidden = true;
+  sortSheet.setAttribute('role', 'dialog');
+  sortSheet.setAttribute('aria-modal', 'true');
+  sortSheet.setAttribute('aria-label', 'Sort by');
+  var sortHead = node('div', 'pf_sheetHead');
+  sortHead.appendChild(node('h2', '', 'Sort By'));
+  var sortX = node('button', 'pf_sheetX', '×');
+  sortX.type = 'button';
+  sortX.setAttribute('aria-label', 'Close');
+  sortX.addEventListener('click', closeSheet);
+  sortHead.appendChild(sortX);
+  sortSheet.appendChild(sortHead);
+  SORTS.forEach(function (pair) {
+    var b = node('button', 'pf_sortOpt', pair[1]);
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.addEventListener('click', function () { change(function () { state.sort = pair[0]; }); closeSheet(); });
+    sortOptions.push([pair[0], b]);
+    sortSheet.appendChild(b);
+  });
+  scrim.appendChild(sortSheet);
+
+  var aside = qs('aside._4HCqHa_sidebar');
+  if (aside) {
+    var head = node('div', 'pf_filterHead');
+    head.appendChild(node('h2', '', 'Filters'));
+    var x = node('button', 'pf_sheetX', '×');
+    x.type = 'button';
+    x.setAttribute('aria-label', 'Close');
+    x.addEventListener('click', closeSheet);
+    head.appendChild(x);
+    aside.insertBefore(head, aside.firstChild);
+    var foot = node('div', 'pf_filterFoot');
+    var clearBtn = node('button', 'pf_filterClear', 'Clear');
+    clearBtn.type = 'button';
+    clearBtn.addEventListener('click', clearFilters);
+    var applyBtn = node('button', 'pf_filterApply', 'Apply');
+    applyBtn.type = 'button';
+    applyBtn.addEventListener('click', closeSheet);
+    foot.appendChild(clearBtn);
+    foot.appendChild(applyBtn);
+    aside.appendChild(foot);
+  }
+
+  var bar = node('div', 'pf_lbar');
+  barSort = node('button', '', 'Sort By');
+  barSort.type = 'button';
+  barSort.setAttribute('aria-haspopup', 'dialog');
+  barSort.addEventListener('click', function () { show('sort', barSort); });
+  barFilter = node('button', '', 'Filter');
+  barFilter.type = 'button';
+  barFilter.setAttribute('aria-haspopup', 'dialog');
+  filterCount = node('span', 'pf_lcount');
+  filterCount.hidden = true;
+  barFilter.appendChild(filterCount);
+  barFilter.addEventListener('click', function () { show('filter', barFilter); });
+  bar.appendChild(barSort);
+  bar.appendChild(barFilter);
+  doc.body.appendChild(scrim);
+  doc.body.appendChild(bar);
+
+  var intro = qs('._4HCqHa_intro');
+  if (intro) {
+    var row = node('div', 'pf_qchips');
+    row.setAttribute('role', 'group');
+    row.setAttribute('aria-label', 'Quick filters');
+    quickStock = node('button', 'pf_qchip', 'In stock');
+    quickStock.type = 'button';
+    quickStock.addEventListener('click', function () { change(function () { state.inStock = !state.inStock; }); });
+    row.appendChild(quickStock);
+    colorChips.slice(0, 8).forEach(function (chip) {
+      var name = chip.getAttribute('data-value') || '';
+      var q = node('button', 'pf_qchip');
+      q.type = 'button';
+      var dot = node('i', 'pf_qdot');
+      dot.style.background = colorOf(name);
+      q.appendChild(dot);
+      q.appendChild(doc.createTextNode(name));
+      q.addEventListener('click', function () { change(function () { state.colors = toggle(state.colors, name); }); });
+      quickColors.push([name, q]);
+      row.appendChild(q);
+    });
+    intro.parentNode.insertBefore(row, intro.nextSibling);
+  }
+  win.addEventListener('keydown', function (event) { if (event.key === 'Escape') closeSheet(); });
+
+  /** Keeps the bar, the quick chips and the sort sheet in line with the state (called at the end of apply()). */
+  function syncMobile() {
+    if (!barFilter) return;
+    var n = activeCount();
+    filterCount.hidden = n === 0;
+    filterCount.textContent = String(n);
+    barFilter.setAttribute('aria-label', 'Filter' + (n ? ', ' + n + ' active' : ''));
+    sortOptions.forEach(function (pair) { pair[1].setAttribute('aria-checked', pair[0] === state.sort ? 'true' : 'false'); });
+    if (quickStock) quickStock.setAttribute('aria-pressed', state.inStock ? 'true' : 'false');
+    quickColors.forEach(function (pair) { pair[1].setAttribute('aria-pressed', state.colors.indexOf(pair[0]) !== -1 ? 'true' : 'false'); });
+  }
   apply();
 })();

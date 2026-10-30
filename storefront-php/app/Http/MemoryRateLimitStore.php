@@ -17,6 +17,14 @@ final class MemoryRateLimitStore implements RateLimitStore
         return $this->hits[$id];
     }
 
+    public function release(string $key, int $windowSeconds, int $now): void
+    {
+        $id = $key . '|' . intdiv($now, $windowSeconds) * $windowSeconds;
+        if (($this->hits[$id] ?? 0) > 0) {
+            $this->hits[$id]--;
+        }
+    }
+
     public function purge(int $olderThan): void
     {
         foreach (array_keys($this->hits) as $id) {

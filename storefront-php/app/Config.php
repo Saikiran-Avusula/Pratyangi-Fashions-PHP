@@ -65,6 +65,8 @@ final class Config
     public readonly array $shopSocial;
     /** The public Google OAuth client id (GOOGLE_CLIENT_ID); null = no Google button and POST /auth/google answers 503. */
     public readonly ?string $googleClientId;
+    /** Tests only (GOOGLE_SCRIPT_PATH): a same-site path that serves the sign-in script instead of Google's. Refused in production. */
+    public readonly ?string $googleScriptPath;
     public readonly string $mailLogPath;
 
     public readonly string $erpMode;
@@ -279,6 +281,12 @@ final class Config
             $google = '';
         }
         $this->googleClientId = $google === '' ? null : $google;
+        $gsi = trim((string) ($v['GOOGLE_SCRIPT_PATH'] ?? ''));
+        if ($gsi !== '' && (preg_match('#^/[A-Za-z0-9._-]{1,80}$#D', $gsi) !== 1 || $this->isProduction)) {
+            $problems[] = 'GOOGLE_SCRIPT_PATH: only for tests (a path like /__gsi.js) and never in production';
+            $gsi = '';
+        }
+        $this->googleScriptPath = $gsi === '' ? null : $gsi;
         $this->mailLogPath = (string) ($v['MAIL_LOG_PATH'] ?? $this->logDir . '/mail.log');
 
         // ERP
