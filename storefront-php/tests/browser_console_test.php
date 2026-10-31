@@ -21,8 +21,7 @@ if ($chrome === null) {
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('browser_console_test');
-$tmp = sys_get_temp_dir() . '/pf_console_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_console_');
 $router = BrowserRig::router($tmp);
 
 $clock = new FixedClock((float) time());

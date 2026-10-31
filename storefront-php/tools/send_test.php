@@ -63,7 +63,7 @@ if ($smsOff) {
     echo "SMS: failed - SMS_MODE is not http, nothing real was sent\n";
 } else {
     try {
-        (new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId, (string) $config->smsOtpTemplateId, $config->smsOtpTemplateText))->sendOtp($mobile, $code);
+        (new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId))->sendOtp($mobile, $code); // SMS2: PF_OTP_V2 from Sms\SmsTemplates (refused while its DLT ID is empty)
         echo "SMS: sent\n";
     } catch (\Throwable $e) {
         echo 'SMS: failed - ' . $e->getMessage() . "\n";

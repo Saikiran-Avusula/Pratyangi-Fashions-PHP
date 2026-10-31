@@ -40,3 +40,20 @@ Later than these (see the contract): Google sign-in, ERP status sync.
 - Money is integer paise, never floats. Every SQL statement is prepared. Secrets are hashed at rest and never logged.
 - Keep this file short; workflow detail lives in the `feature-workflow` skill.
 - Do not deploy `.claude/` or `CLAUDE.md` to a server.
+
+## Working rules (always)
+- Work directly. Use an agent ONLY when truly needed: the reviewer agent once per stage for money/security/payment work, or when the prompt explicitly asks. Never architect/developer/tester agents.
+- Save tokens: read only the files you need (grep first, open the matching part, not whole folders); no re-reading files you just edited; no long explanations; replies in the number of lines asked.
+- Tests: `tools\run_db.ps1 -Quick` while working; FULL run only at the end of a stage or before a zip build.
+- Screenshots: take only those the prompt asks for; open them once; retake only what changed.
+- Never print secrets; never run git; never touch port 3306 or non-`_test` databases; snapshot files before editing; update `CHANGES.md`.
+- Never claim done without proof (test counts / screenshots). Say clearly what was NOT done or NOT checked.
+- One session at a time: if another session (terminal or Cowork) is working on this folder, stop and tell me.
+- Never create test/screenshot work folders in %TEMP% or anywhere on C:. Use `E:\Testing fashion store\.tmp\` (`PF_TMP_DIR`; `.tmp/` is git-ignored). Code: `tests/lib/Tmp.php`.
+- Reuse ONE Chrome profile: `E:\Testing fashion store\.tmp\chrome-profile` (`Tmp::profile()`).
+- After every test/screenshot run: stop the PHP server and Chrome, delete the run's work folder, in try/finally so cleanup runs even on failure (`Tmp` does it at script end; kills by PID).
+- Before finishing a task: check nothing new is left in %TEMP% or `.tmp\`; delete only leftovers you created.
+- Before heavy work: check C: free space; if under 20 GB, stop and tell me (`run_db.ps1` does this itself).
+- Never delete anything outside your own test folders without asking me.
+- Always run browser/screenshot tests through `tools\run_db.ps1 -Only <name>` (never `php tests\...` directly), so TEMP is redirected to `.tmp`. Never touch the old `pf_*` folders in %TEMP% (the user deletes them).
+- One request per action: `tests/browser_requests_test.php` must keep passing (ONE document request per navigation, counted on the server). No prefetch/prerender/speculation rules unless the preloaded page is provably reused: first make plain HTML pages cacheable (`private`, no `no-store`; keep `no-store` only on account/session API responses and pages with secrets), then prove in that test that a preloaded navigation costs no extra server hit. If reuse can't be proven, ship without preloading.

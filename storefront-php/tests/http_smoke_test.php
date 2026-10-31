@@ -16,7 +16,7 @@ $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('http_smoke_test');
 
-$mailFile = sys_get_temp_dir() . '/pf_smoke_mail_' . bin2hex(random_bytes(4)) . '.log';
+$mailFile = Tmp::base() . '/pf_smoke_mail_' . bin2hex(random_bytes(4)) . '.log';
 register_shutdown_function(static function () use ($mailFile): void {
     if (is_file($mailFile)) {
         unlink($mailFile);

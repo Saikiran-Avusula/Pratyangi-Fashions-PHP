@@ -53,7 +53,7 @@ final class LandingController
         }
         $response = self::page('Pratyangi Fashions | Tradition Meets Elegance', View::render('home', ['products' => $products, 'catalogError' => $error, 'account' => $account]), ['site.js', 'bag.js']); // bag.js: the cards' "Add to cart"
         if ($sessionToken !== null && $sessionToken !== '') {
-            $response->setHeader('Cache-Control', 'private, no-store')->appendHeader('Vary', 'Cookie'); // the header differs per visitor
+            $response->setHeader('Cache-Control', 'private, no-cache')->appendHeader('Vary', 'Cookie'); // the header differs per visitor; no-cache (not no-store) keeps Back instant (NAV1: no secrets on this page)
         }
         return $response;
     }

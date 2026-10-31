@@ -174,9 +174,10 @@ $t->test('log gateway: writes the code and a masked number under the given folde
 $fake = new FakeSms();
 $fake->start();
 register_shutdown_function(static fn () => $fake->stop());
+// SMS2: the text is PF_OTP_V2 from Sms\SmsTemplates; its DLT ID is still empty there, so the test passes one
 $http = static fn (array $o = []): HttpSmsGateway => new HttpSmsGateway(
-    $o['url'] ?? $fake->url(), $o['user'] ?? 'shop-user', $o['key'] ?? FakeSms::KEY, $o['sender'] ?? 'PRATYA', $o['template'] ?? '1707000000000000001',
-    $o['text'] ?? 'Your Pratyangi Fashions verification code is {#var#}. It is valid for 5 minutes.', 3, null,
+    $o['url'] ?? $fake->url(), $o['user'] ?? 'shop-user', $o['key'] ?? FakeSms::KEY, $o['sender'] ?? 'PRATYA', 3, null, null, 'Your Pratyangi Fashions account email is {#var#}',
+    ['PF_OTP_V2' => $o['template'] ?? '1707000000000000001'],
 );
 
 $t->test('http gateway: one GET to the configured address with username, apikey, senderid, mobile (91 + 10 digits), message with the code, templateid', function () use ($t, $fake, $http): void {
@@ -186,7 +187,7 @@ $t->test('http gateway: one GET to the configured address with username, apikey,
     $t->same(['GET', '/v3/api.php'], [$reqs[0]['method'], $reqs[0]['path']]);
     $t->same([
         'username' => 'shop-user', 'apikey' => FakeSms::KEY, 'senderid' => 'PRATYA', 'mobile' => '919876543210',
-        'message' => 'Your Pratyangi Fashions verification code is 012345. It is valid for 5 minutes.', 'templateid' => '1707000000000000001',
+        'message' => "012345 is the OTP for your PRATYANGI FASHIONS account. Valid for 10 minutes. Do not share it with anyone.\n-PRATYANGI FASHIONS", 'templateid' => '1707000000000000001',
     ], $reqs[0]['query']);
     $t->ok(!str_contains($reqs[0]['raw'], '{#var#}') && !str_contains($reqs[0]['raw'], '%7B%23var%23%7D'), 'the placeholder is replaced');
 });

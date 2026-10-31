@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 // Shared by tests/browser_console_test.php and tests/browser_layout_test.php (both need MySQL, see DbGuard, and Google Chrome).
 // serve() runs the real App on the PHP built-in server (test database, mock ERP, log mailer); dump() loads a URL in headless Chrome.
+require_once __DIR__ . '/Tmp.php';
+
 final class BrowserRig
 {
     public static function chrome(): ?string
@@ -22,6 +24,7 @@ final class BrowserRig
         file_put_contents($tmp . '/router.php', '<?php
 require ' . var_export($root . '/tests/lib/TestCase.php', true) . '; require ' . var_export($root . '/tests/lib/Helpers.php', true) . '; require ' . var_export($root . '/tests/lib/DbGuard.php', true) . ';
 $path = parse_url($_SERVER["REQUEST_URI"], PHP_URL_PATH);
+if (getenv("PF_CC_HITLOG")) { file_put_contents(getenv("PF_CC_HITLOG"), sprintf("%.3f %s %s %s %s\n", microtime(true), $_SERVER["REQUEST_METHOD"], $_SERVER["REQUEST_URI"], $_SERVER["HTTP_SEC_PURPOSE"] ?? "-", $_SERVER["HTTP_SEC_FETCH_DEST"] ?? "-"), FILE_APPEND); } // every request the server sees (browser_requests_test)
 if ($path === "/__w") { header("Content-Type: text/html"); readfile(' . var_export($tmp . '/wrap.html', true) . '); return; }
 if ($path === "/__gsi.js") { header("Content-Type: text/javascript"); readfile(' . var_export($tmp . '/gsi.js', true) . '); return; }
 if ($path === "/__p") { file_put_contents(' . var_export($tmp . '/progress.txt', true) . ', str_replace(["\r", "\n"], " ", (string) file_get_contents("php://input")) . "\n", FILE_APPEND); header("Content-Type: text/plain"); echo "ok"; return; } // progress events of tests/browser_layout_test.php
@@ -59,6 +62,7 @@ echo $r->body();
     public static function serve(string $router, int $port, array $env)
     {
         $server = proc_open([PHP_BINARY, '-S', '127.0.0.1:' . $port, $router], [['null'], ['null'], ['null']], $pipes, null, ['PF_TEST_APPLY_SCHEMA' => '0', 'PF_TEST_APPLY_OTP' => '0'] + $env + getenv());
+        Tmp::track($server);
         usleep(1500000);
         return $server;
     }
@@ -66,18 +70,24 @@ echo $r->body();
     /** @param resource $server */
     public static function stop($server): void
     {
-        proc_terminate($server);
-        proc_close($server);
+        Tmp::kill($server);
     }
 
     /** Chrome's stderr + stdout for one page: console messages (all levels) appear as "CONSOLE" lines, --dump-dom prints the final DOM. */
     public static function dump(string $chrome, string $profile, string $url, int $width = 1280, int $height = 900, int $budgetMs = 5000, array $extra = []): string
     {
+        $profile = Tmp::profile(); // $profile (a caller's own folder) is ignored: one shared, emptied Chrome profile
         $err = $profile . '.err';
         $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--enable-logging=stderr', '--v=0', '--virtual-time-budget=' . $budgetMs, '--window-size=' . $width . ',' . $height,
             ...$extra, '--user-data-dir=' . $profile, '--dump-dom', $url], [['null'], ['pipe', 'w'], ['file', $err, 'w']], $pipes);
-        $out = (string) stream_get_contents($pipes[1]);
-        proc_close($p);
-        return $out . (string) @file_get_contents($err);
+        Tmp::track($p);
+        try {
+            $out = (string) stream_get_contents($pipes[1]);
+        } finally {
+            Tmp::kill($p);
+        }
+        $log = (string) @file_get_contents($err);
+        @unlink($err);
+        return $out . $log;
     }
 }

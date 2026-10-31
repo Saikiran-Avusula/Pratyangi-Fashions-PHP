@@ -63,10 +63,10 @@ $t->test('/bag signed out: empty-bag frame in the Node markup, sign-in checkout 
     foreach (['<title>My Bag | Pratyangi Fashions</title>', '<main class="BpPmcW_page" data-pf-bag-page="bag" data-pf-image-base="" data-checkout-href="/login?next=/checkout">',
         '<section class="BpPmcW_bag" aria-labelledby="bag-title">', '<h1 id="bag-title">My Bag <span data-pf="title-count">(0 items)</span></h1>',
         '<a class="BpPmcW_continue" href="/new-arrivals">', 'data-pf="bag-lead"></p>', '<div class="BpPmcW_items" data-pf="bag-items"></div>',
-        '<h2>Order Summary</h2>', '<dd data-pf="subtotal">Rs. 0.00</dd>', '<dd>Confirmed by the shop</dd>', '<strong data-pf="total">Rs. 0.00</strong>',
-        'Delivery charges are not included.', 'class="BpPmcW_checkout" data-pf="checkout-slot" disabled=""', 'Online payment is not available yet', 'Coupons are not available yet.',
+        '<h2>Order Summary</h2>', '<dd data-pf="subtotal">₹0</dd>', '<dd>At checkout</dd>', '<strong data-pf="total">₹0</strong>',
+        'Delivery charges are added at checkout', 'class="BpPmcW_checkout" data-pf="checkout-slot" disabled=""', 'Online payment is not available yet', 'Coupons are not available yet.',
         '<h2 id="recommended-title">You May Also Like</h2>', 'Complete your look with these beautiful sarees', '<section class="OL4btW_section"', 'class="f_viWW_footer"', 'class="pSCCwa_header"',
-        '<span class="pSCCwa_count" data-pf="bag-count">0</span>', 'aria-label="Open your bag, 0 items" href="/bag"', 'aria-label="Sign in" href="/login"'] as $needle) {
+        '<span class="pSCCwa_count" data-pf="bag-count" hidden>0</span>', 'aria-label="Open your bag, 0 items" href="/bag"', 'aria-label="Sign in" href="/login"'] as $needle) {
         $t->contains($needle, $b, $needle);
     }
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script><script defer src="/assets/bag-page.js"></script>', $b);
@@ -171,8 +171,8 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
         '<a class="pnvDaq_navItem pnvDaq_navActive" aria-current="page" href="/account">', '<span>Overview</span>', '<span>My Orders</span>', '<span>Help &amp; Support</span>',
         '<button type="button" class="pnvDaq_logout" data-pf="logout">', 'Logout</button>', '<h2>Hello, asha</h2>', 'Welcome to Pratyangi Fashions',
         '<span>Since Oct 2026</span>', '<span>asha@example.com</span>', '<strong>0</strong>Total orders', '<strong>0</strong>Saved Addresses',
-        'id="addresses" data-pf="addresses-panel"', '<h2>Saved Addresses</h2>', '<h2>Recent Orders</h2>',
-        '<p>No orders yet.</p>', 'href="/new-arrivals">Start shopping', '<h2>No saved addresses yet.</h2>', 'data-pf-open-address>+ Add address</button>', 'data-pf-address-modal'] as $needle) {
+        '<h2>Recent Orders</h2>',
+        '<p>No orders yet.</p>', 'href="/new-arrivals">Start shopping', 'data-pf-address-modal'] as $needle) {
         $t->contains($needle, $b, $needle);
     }
     $t->same(7, substr_count($b, 'class="pnvDaq_navItem'), 'seven sidebar rows (Figma; My Reviews is hidden until it exists)');
@@ -185,7 +185,7 @@ $t->test('/account signed in: name, email, member since, Logout button, links to
     $t->contains('<div class="pf_topbar"><div class="pf_ann" data-pf="announce"><p>Authentic Handlooms</p><p>Handwoven by master artisans</p><p>Help on WhatsApp</p></div><p class="pf_topbarLinks"><a href="/contact">Contact</a></p></div>', $b, 'the one top bar, with a link only to a page that exists');
     $t->same(1, substr_count($b, 'pf_topbar"'), 'one top bar');
     $t->same(3, substr_count($b, 'P71-SG_statOrders'), 'the three stat cards (orders, wishlist, addresses) share one style');
-    $t->same(1, substr_count($b, 'data-pf-open-address'), 'one Add address button (empty state)');
+    $t->same(0, substr_count($b, 'data-pf-open-address'), 'the overview has no address panel (the Addresses page has it)');
     $t->contains('href="/account/addresses"', $b, 'Addresses row has its own page');
     $t->ok(!str_contains($b, 'Please confirm your email address'), 'verified: no notice');
     $t->same(1, preg_match('#<div class="P71-SG_profileMeta"><span>Since Oct 2026</span><span>asha@example.com</span></div>#', $b), 'no mobile line');
@@ -256,11 +256,11 @@ $t->test('account sections: each has its own page, the same sidebar, and only th
         $t->contains('<input type="checkbox" disabled data-pf-consent="' . $channel . '"/>', $n, $channel . ': a box that is never ticked by the server (the page loads the saved choice)');
     }
     foreach (['payments' => 'Payment Methods', 'reviews' => 'My Reviews'] as $s => $title) {
-        $t->contains('<h2>' . $title . '</h2>', $page($s));
+        $t->contains('<h1>' . $title . '</h1>', $page($s));
     }
     foreach (['overview', 'orders', 'addresses', 'notifications', 'payments', 'reviews', 'help'] as $s) {
         $t->ok(stripos($page($s), 'coming soon') === false && stripos($page($s), 'will come later') === false, $s . ': no "coming soon" text');
-        $t->ok(!str_contains($page($s), 'pf_emptyState"'), $s . ': no tall empty box (compact in every panel)');
+        $t->ok(in_array($s, ['orders', 'addresses', 'payments', 'reviews'], true) || !str_contains($page($s), 'pf_emptyState"'), $s . ': the empty state is only on the pages that can be empty');
     }
     $t->contains('aria-current="page" href="/account/help"', $page('help'));
     $t->same([302, '/login?next=/account/help'], (static fn ($r): array => [$r->status(), $r->header('Location')])($pages(null)->account($get('/account/help'), 'help')));
@@ -274,7 +274,7 @@ $t->test('the header bag link goes to /bag on every page, and the bag-page and a
             continue; // the coming page has no header
         }
         $t->contains('aria-label="Open your bag, 0 items" href="/bag" data-pf="bag-link"', $b, $path);
-        $t->contains('<span class="pSCCwa_count" data-pf="bag-count">0</span>', $b, $path);
+        $t->contains('<span class="pSCCwa_count" data-pf="bag-count" hidden>0</span>', $b, $path);
     }
     $static = new StaticFiles($root . '/public/assets');
     foreach (['/assets/bag-page.js', '/assets/account.js', '/assets/wishlist.js', '/assets/images/figma/trash.svg', '/assets/images/figma/checkout-arrow.svg'] as $path) {

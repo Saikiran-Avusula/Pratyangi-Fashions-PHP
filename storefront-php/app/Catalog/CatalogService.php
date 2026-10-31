@@ -35,16 +35,26 @@ final class CatalogService
             throw ApiException::unavailable('The catalogue is not available yet. Please try again later.');
         }
         $wantedCategory = ($query['category'] ?? null) !== null && $query['category'] !== '' ? Text::lower($query['category']) : null;
-        $needle = ($query['q'] ?? null) !== null && $query['q'] !== '' ? Text::lower($query['q']) : null;
+        $needle = ($query['q'] ?? null) !== null && $query['q'] !== '' ? self::tokens($query['q']) : null;
         $matches = [];
+        $rank = [];
         foreach ($all['products'] as $item) {
             if ($wantedCategory !== null && ($item['category'] === null || Text::lower($item['category']) !== $wantedCategory)) {
                 continue;
             }
-            if ($needle !== null && !self::matches($item, $needle)) {
-                continue;
+            if ($needle !== null) {
+                $score = self::score($item, $needle);
+                if ($score === null) {
+                    continue;
+                }
+                $rank[count($matches)] = $score;
             }
             $matches[] = $item;
+        }
+        if ($needle !== null) { // best first; equal scores keep the catalogue order
+            $order = array_keys($matches);
+            usort($order, static fn (int $a, int $b): int => [$rank[$a], $a] <=> [$rank[$b], $b]);
+            $matches = array_map(static fn (int $i): array => $matches[$i], $order);
         }
         $start = $query['cursor'] !== null ? (int) $query['cursor'] : 0;
         $end = $start + $query['limit'];
@@ -71,14 +81,39 @@ final class CatalogService
         return CatalogMapper::buildList($sellable, $availability);
     }
 
-    /** @param array<string,mixed> $item */
-    private static function matches(array $item, string $needle): bool
+    /** Lower-case words of a text; a typed query keeps only words of 2+ characters. @return list<string> */
+    private static function tokens(string $text): array
     {
-        foreach (['name', 'sku', 'category', 'fabric', 'color'] as $field) {
-            if (is_string($item[$field]) && Text::contains(Text::lower($item[$field]), $needle)) {
-                return true;
-            }
+        return preg_split('/[^\p{L}\p{N}]+/u', Text::lower($text), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+
+    /**
+     * Every typed word (2+ characters) must start a word of the name, fabric, category or colour. Lower is better:
+     * 0 name starts with it, 1 a name word, 2 fabric/category, 3 colour; an item scores its worst word. Null = no match.
+     * shortcut: catalogue items carry no tags, so tags are not searched; add them here when the ERP sends them.
+     * @param array<string,mixed> $item @param list<string> $words
+     */
+    private static function score(array $item, array $words): ?int
+    {
+        $words = array_values(array_filter($words, static fn (string $w): bool => mb_strlen($w, 'UTF-8') >= 2));
+        if ($words === []) {
+            return null;
         }
-        return false;
+        $worst = 0;
+        foreach ($words as $w) {
+            $best = null;
+            foreach (['name', 'fabric', 'category', 'color'] as $field) {
+                foreach (is_string($item[$field] ?? null) ? self::tokens($item[$field]) : [] as $pos => $token) {
+                    if (str_starts_with($token, $w)) {
+                        $best = min($best ?? 9, $field === 'name' ? ($pos === 0 ? 0 : 1) : ($field === 'color' ? 3 : 2));
+                    }
+                }
+            }
+            if ($best === null) {
+                return null;
+            }
+            $worst = max($worst, $best);
+        }
+        return $worst;
     }
 }

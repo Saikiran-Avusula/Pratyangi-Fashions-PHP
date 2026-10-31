@@ -122,8 +122,8 @@ $t->test('/product?sku=: 200 with the Node layout, price, MRP, tax line, stock l
     $b = $r->body();
     foreach (['<title>Product | Pratyangi Fashions</title>', '<main class="udK_nG_page">', '<div class="udK_nG_wrap">', '<a href="/new-arrivals">← Back to New Arrivals</a>',
         '<article class="udK_nG_product" aria-labelledby="product-title"', '<h1 id="product-title">Kanjivaram Silk Saree</h1>', '<p class="udK_nG_subtitle">Maroon</p>',
-        '<strong>Rs. 11,499.00</strong><del>Rs. 14,999.00</del>', '<p class="udK_nG_stock">Plus 5% tax, added at checkout.</p>', '<p class="udK_nG_stock">In stock</p>',
-        '<button type="button" class="udK_nG_add" data-pf="add-product" data-sku="MOCK-SAR-001" data-bag-href="/bag">Add to bag</button>',
+        '<strong>₹11,499</strong><del>₹14,999</del>', '<p class="udK_nG_stock">Plus 5% tax, added at checkout.</p>', '<p class="udK_nG_stock">In stock</p>',
+        '<button type="button" class="udK_nG_add" data-pf="add-product" data-sku="MOCK-SAR-001" data-sizes="" data-bag-href="/bag">Add to bag</button>', // UI10: a saree has no size picker
         'src="/assets/images/reference/product-1.webp"', 'object-position:center top', 'alt="Kanjivaram Silk Saree"', 'class="pSCCwa_header"', 'class="f_viWW_footer"'] as $needle) {
         $t->contains($needle, $b, $needle);
     }
@@ -138,7 +138,7 @@ $t->test('/product?sku=: 200 with the Node layout, price, MRP, tax line, stock l
     // a price with no MRP discount shows no <del>; no tax line when the tax is 0 is covered by the unit below
     $b2 = $get($app, '/product?sku=MOCK-SAR-002')->body();
     $t->ok(!str_contains($b2, '<del>'));
-    $t->contains('Rs. 2,499.00', $b2);
+    $t->contains('₹2,499', $b2);
     $t->contains('<p class="udK_nG_subtitle">Indigo</p>', $b2);
     $b3 = $get($app, '/product?sku=MOCK-KUR-001')->body();
     $t->contains('<p class="udK_nG_subtitle">Teal · M</p>', $b3);
@@ -165,7 +165,8 @@ $t->test('sold out and low stock', function () use ($t, $get, $mockFile, $appWit
     $t->contains('Only 2 left', $l);
     $sold = $get($app, '/new-arrivals')->body();
     $t->same(1, substr_count($sold, 'JEjkwq_soldOutBadge">'));
-    $t->contains('aria-label="Embroidered Kurti (sold out) is out of stock"', $sold);
+    $t->contains('JEjkwq_soldOutBadge', $sold); // UI9: one indicator, the badge; no "is out of stock" button
+    $t->ok(!str_contains($sold, 'is out of stock"'), 'no out-of-stock button');
     $t->contains('data-instock="0"', $sold);
 });
 
@@ -370,7 +371,7 @@ $t->test('a signed-in visitor: the pages stay private and vary by cookie; a fail
     foreach (['/new-arrivals', '/product?sku=MOCK-SAR-001'] as $uri) {
         $r = $get($app, $uri, ['Cookie' => 'pf_session=abc']);
         $t->same(200, $r->status(), $uri);
-        $t->same('private, no-store', $r->header('Cache-Control'), $uri);
+        $t->same('private, no-cache', $r->header('Cache-Control'), $uri); // NAV1
         $t->contains('Cookie', (string) $r->header('Vary'), $uri);
         $t->contains('class="pSCCwa_iconButton" aria-label="Sign in"', $r->body(), $uri);
         $t->ok(!str_contains($r->body(), 'abc'), $uri . ': the cookie value is never printed');

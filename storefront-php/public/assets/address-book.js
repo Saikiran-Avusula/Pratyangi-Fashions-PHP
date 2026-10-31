@@ -5,6 +5,7 @@
  */
 (function (win) {
   'use strict';
+  if (window.__pfAddressBook) return; window.__pfAddressBook = true; // REQ1: loaded twice = set up once
 
   var doc = win.document;
   // the tick box at checkout: a tick records the choice at once (it is never ticked for the visitor and an untick does not undo an earlier yes)
@@ -183,8 +184,10 @@
     }
 
     if (form) {
+      var saving = false; // REQ1: a double tap or Enter while saving sends ONE request
       form.addEventListener('submit', function (e) {
         e.preventDefault();
+        if (saving) return;
         clearErrors();
         var idField = doc.querySelector('[data-pf-field="id"]');
         var addrId = idField ? idField.value.trim() : '';
@@ -210,6 +213,7 @@
         var url = isEdit ? '/api/v1/addresses/' + encodeURIComponent(addrId) : '/api/v1/addresses';
         var method = isEdit ? 'PUT' : 'POST';
 
+        saving = true;
         win.fetch(url, {
           method: method,
           credentials: 'include',
@@ -222,6 +226,7 @@
         }, function () {
           return { ok: false, status: 0, data: { message: 'We could not reach the server. Check your connection and try again.' } };
         }).then(function (res) {
+          saving = false;
           if (saveBtn) { saveBtn.disabled = false; saveBtn.textContent = 'Save Address'; }
           if (res.ok) {
             closeModal();

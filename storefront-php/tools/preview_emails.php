@@ -49,7 +49,7 @@ foreach (['C:\Program Files\Google\Chrome\Application\chrome.exe', 'C:\Program F
         break;
     }
 }
-$profile = sys_get_temp_dir() . '/pf_preview_chrome_' . bin2hex(random_bytes(4));
+$profile = Tmp::profile();
 $publicUrl = 'file:///' . str_replace('\\', '/', dirname(__DIR__)) . '/public';
 foreach ($mails as $name => $m) {
     // the pictures come from public/ on this machine (the sample address above does not exist)
@@ -68,7 +68,7 @@ foreach ($mails as $name => $m) {
         if (is_resource($p)) {
             stream_get_contents($pipes[1]);
             stream_get_contents($pipes[2]);
-            proc_close($p);
+            Tmp::kill($p);
         }
         unlink($frame);
     }

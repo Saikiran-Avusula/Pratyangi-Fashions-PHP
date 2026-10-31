@@ -8,6 +8,7 @@
  */
 (function () {
   'use strict';
+  if (window.__pfAuth) return; window.__pfAuth = true; // REQ1: loaded twice = set up once
 
   var doc = document;
   var win = window;
@@ -402,6 +403,13 @@
     var state = { touched: false, busy: false, errors: {}, formError: '', notice: '', google: false };
     var shownKind = 'empty';
     var signupLink = qs('.neurva_switch a', card); // "Create an account", with ?next= kept
+    var fromReset = /[?&]reset=1(&|$)/.test(win.location.search); // sent here by a finished password reset
+    if (fromReset) {
+      var given = /[?&]email=([^&]*)/.exec(win.location.search);
+      if (given) { try { email.input.value = decodeURIComponent(given[1].replace(/\+/g, ' ')).slice(0, 254); } catch (e) { /* a broken value is ignored */ } }
+      state.notice = 'Password updated. Please sign in.';
+      paintAll();
+    }
 
     function paintEmail() {
       var value = email.input.value;
@@ -790,10 +798,8 @@
           return call('/auth/password/reset', { method: 'POST', body: body({ code: code, password: reset.password.input.value }) })
             .then(function () {
               win.clearTimeout(countdown);
-              card.textContent = '';
-              card.appendChild(template('done'));
               state.step = 'done';
-              win.setTimeout(function () { win.location.assign(safeNext(root.getAttribute('data-pf-next'))); }, 1500);
+              win.location.assign('/login?reset=1&email=' + encodeURIComponent(typedTarget())); // the sign-in page says "Password updated" and has the email filled in
             });
         });
       });

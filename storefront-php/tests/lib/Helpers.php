@@ -5,6 +5,7 @@ declare(strict_types=1);
 
 // The autoloader must exist before FixedClock extends Clock below (TestCase only loads it in its constructor).
 require_once dirname(__DIR__, 2) . '/app/bootstrap.php';
+require_once __DIR__ . '/Tmp.php';
 
 use Pratyangi\App;
 use Pratyangi\Config;
@@ -48,9 +49,7 @@ final class Helpers
     /** A fresh empty folder under the system temp folder (removed with rmTree). */
     public static function tempDir(string $prefix = 'pf_test_'): string
     {
-        $dir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . $prefix . bin2hex(random_bytes(6));
-        mkdir($dir, 0775, true);
-        return $dir;
+        return Tmp::dir($prefix);
     }
 
     public static function rmTree(string $dir): void
@@ -81,7 +80,7 @@ final class Helpers
             'SMS_ENABLED' => 'true', // the tests drive the mobile flows; the SMS_ENABLED=false cases pass their own
             'ERP_MODE' => 'mock',
             'MAIL_MODE' => 'log',
-            'MAIL_LOG_PATH' => sys_get_temp_dir() . '/pf_unit_mail.log',
+            'MAIL_LOG_PATH' => Tmp::base() . '/pf_unit_mail.log',
             'CATALOG_CACHE_DIR' => self::tempDir('pf_cache_'),
             'LOG_LEVEL' => 'silent',
         ]);

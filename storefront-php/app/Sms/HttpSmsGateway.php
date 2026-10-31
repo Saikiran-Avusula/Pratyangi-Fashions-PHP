@@ -17,18 +17,33 @@ final class HttpSmsGateway implements SmsGateway, SmsHintGateway
         private string $username,
         private string $apiKey,
         private string $senderId,
-        private string $templateId,
-        private string $templateText,
         private int $timeoutSeconds = 10,
         private ?string $caBundle = null,
         private ?string $hintTemplateId = null, // the approved template of the email hint; none = no hint is sent
         private string $hintTemplateText = 'Your Pratyangi Fashions account email is {#var#}',
+        private array $templateIds = SmsTemplates::IDS, // SMS2: the DLT template IDs; tests pass their own
     ) {
     }
 
+    /** SMS2: the code goes out in the DLT template PF_OTP_V2 (its text and ID live in SmsTemplates). */
     public function sendOtp(string $mobile, string $code): void
     {
-        $this->submit($mobile, str_replace('{#var#}', $code, $this->templateText), $this->templateId);
+        $this->send($mobile, 'PF_OTP_V2', ['v' => $code]);
+    }
+
+    /**
+     * One DLT template with its values. A template without an approved DLT ID is refused here and the provider is never called
+     * (the caller logs the SmsException; its message names the template, never the number or a value).
+     * @param array<string,string|int> $vars
+     */
+    public function send(string $mobile, string $key, array $vars): void
+    {
+        $id = (string) ($this->templateIds[$key] ?? '');
+        $text = SmsTemplates::render($key, $vars); // refuses a missing / too long / wrongly formatted value
+        if ($id === '') {
+            throw new SmsException('SMS template ' . $key . ' has no DLT template ID yet: not sent.');
+        }
+        $this->submit($mobile, $text, $id);
     }
 
     public function sendEmailHint(string $mobile, string $maskedEmail): void

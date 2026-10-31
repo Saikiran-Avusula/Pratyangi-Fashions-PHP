@@ -17,8 +17,7 @@ if ($chrome === null) {
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('browser_rate_limit_test');
-$tmp = sys_get_temp_dir() . '/pf_rl_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_rl_');
 $router = BrowserRig::router($tmp);
 file_put_contents($tmp . '/wrap.html', '<!doctype html><body><pre id="out">running</pre><iframe id="f" style="width:900px;height:900px"></iframe><script>
 var out = document.getElementById("out"), f = document.getElementById("f"), log = [];

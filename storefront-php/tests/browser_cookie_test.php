@@ -17,8 +17,7 @@ if ($chrome === null) {
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('browser_cookie_test');
-$tmp = sys_get_temp_dir() . '/pf_cookie_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_cookie_');
 $router = BrowserRig::router($tmp);
 
 $js = <<<'JS'
@@ -81,9 +80,10 @@ foreach ([390, 1440] as $i => $width) {
     BrowserRig::router($dir);
     $server = BrowserRig::serve($dir . '/router.php', 8470 + $i, []);
     $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=60000', '--window-size=' . max($width + 40, 520) . ',900',
-        '--user-data-dir=' . $dir . '/profile', '--dump-dom', 'http://127.0.0.1:' . (8470 + $i) . '/__w'], [['null'], ['pipe', 'w'], ['file', $dir . '/err.log', 'w']], $pipes);
+        '--user-data-dir=' . Tmp::profile(), '--dump-dom', 'http://127.0.0.1:' . (8470 + $i) . '/__w'], [['null'], ['pipe', 'w'], ['file', $dir . '/err.log', 'w']], $pipes);
+    Tmp::track($p);
     $dom = (string) stream_get_contents($pipes[1]);
-    proc_close($p);
+    Tmp::kill($p);
     BrowserRig::stop($server);
     $rows = preg_match('/@@(\[.*\])@@/s', html_entity_decode($dom, ENT_QUOTES), $m) === 1 ? json_decode($m[1], true) : null;
     $t->test('the cookie notice at ' . $width . ' px', function () use ($t, $rows): void {

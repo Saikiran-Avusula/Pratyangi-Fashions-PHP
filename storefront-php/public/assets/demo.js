@@ -5,6 +5,7 @@
  *  - review form: star rating, text counter, tags; reviews page: the two tabs; membership: Monthly / Yearly switch */
 (function (win) {
   'use strict';
+  if (window.__pfDemo) return; window.__pfDemo = true; // REQ1: loaded twice = set up once
   var doc = win.document;
   function qsa(sel, root) { return Array.prototype.slice.call((root || doc).querySelectorAll(sel)); }
 

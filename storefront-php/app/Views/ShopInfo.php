@@ -119,6 +119,23 @@ final class ShopInfo
         return self::$config?->shopSocial ?? [];
     }
 
+    /**
+     * LOGO1: the horizontal lockup (emblem + name + tagline) built by tools/logo_build.php: WebP with a PNG fallback, 1x/2x/3x for the
+     * phone (44px tall: the name is then 11px) and desktop (56px) header. width/height are set so nothing shifts. '' when the files are missing
+     * (the caller then shows the old emblem + text).
+     */
+    public static function lockup(bool $priority): string
+    {
+        if (!is_file(self::brandDir() . 'logo-full-56.png')) {
+            return '';
+        }
+        $base = '/assets/images/brand/logo-full-';
+        $set = static fn (string $ext): string => implode(', ', array_map(static fn (array $s): string => $base . $s[0] . '.' . $ext . ' ' . $s[1] . 'w', [[44, 155], [56, 197], [88, 310], [112, 394], [132, 465], [168, 592]]));
+        $sizes = '(max-width: 425px) 155px, 197px';
+        return '<picture class="pf_lockup"><source type="image/webp" srcset="' . $set('webp') . '" sizes="' . $sizes . '"/><img src="' . $base . '56.png" srcset="' . $set('png') . '" sizes="' . $sizes
+            . '" width="197" height="56" alt="Pratyangi Fashions" decoding="async"' . ($priority ? ' fetchpriority="high"' : ' loading="lazy"') . '/></picture>';
+    }
+
     /** The site-relative address of the logo: a file in public/assets/images/brand/ when there is one, else the existing emblem. */
     public static function logoPath(): string
     {
@@ -169,9 +186,7 @@ final class ShopInfo
         if ($rupees === null) {
             return '';
         }
-        $digits = (string) $rupees;
-        $grouped = strlen($digits) > 3 ? preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($digits, 0, -3)) . ',' . substr($digits, -3) : $digits;
-        return 'Free Shipping on Orders Above ₹' . $grouped;
+        return 'Free Shipping on Orders Above ' . View::rs($rupees);
     }
 
     /** The "tel:" form of the phone number (digits and a leading +), or '' when it has none. */

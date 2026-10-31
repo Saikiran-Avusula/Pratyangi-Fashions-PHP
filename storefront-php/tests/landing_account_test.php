@@ -33,7 +33,7 @@ $t->test('signed in: avatar initial and first name, escaped', function () use ($
     $t->contains('aria-label="My account, signed in as asha Rao"', $b);
     $t->contains('title="asha@example.com"', $b);
     $t->ok(!str_contains($b, 'aria-label="Sign in"'), 'no sign-in link when signed in');
-    $t->contains('<span class="pSCCwa_count" data-pf="bag-count">0</span>', $b, 'the bag count starts at 0 (site.js fills it)');
+    $t->contains('<span class="pSCCwa_count" data-pf="bag-count" hidden>0</span>', $b, 'the bag count starts at 0 (site.js fills it)');
 });
 
 $t->test('signed out: sign-in link in the Node style', function () use ($t, $controller): void {
@@ -74,6 +74,12 @@ $t->test('name rules: email-like name, blank name, accents, emoji', function () 
     $t->contains('aria-label="My account"', $b);
 });
 
+$t->test('avatar picture: alt is the first name; no picture, no img', function () use ($t): void {
+    $a = HeaderAccount::fromRow(['name' => 'Asha Rao', 'email' => 'a@x.com', 'picture_url' => 'https://lh3.googleusercontent.com/a/demo']);
+    $t->contains('alt="Asha"', $a->avatarImg(), 'picture');
+    $t->same('', HeaderAccount::fromRow(['name' => 'Asha', 'email' => 'a@x.com'])->avatarImg(), 'no picture');
+});
+
 $t->test('invalid cookie (lookup finds nothing) renders signed out', function () use ($t, $controller): void {
     $r = $controller(static fn (string $token): ?array => null)->home('not-a-real-token');
     $t->same(200, $r->status());
@@ -112,7 +118,7 @@ $t->test('through the App: a cookie with an unreachable database is signed out a
     $r = Helpers::app()->handle(Helpers::request('GET', '/', ['Cookie' => 'pf_session=abc123']));
     $t->same(200, $r->status());
     $t->contains('aria-label="Sign in"', $r->body());
-    $t->contains('private, no-store', (string) $r->header('Cache-Control'));
+    $t->contains('private, no-cache', (string) $r->header('Cache-Control')); // NAV1
     $t->contains('Cookie', (string) $r->header('Vary'));
 });
 

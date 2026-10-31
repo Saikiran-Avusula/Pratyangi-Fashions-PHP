@@ -8,6 +8,7 @@
  */
 (function () {
   'use strict';
+  if (window.__pfListing) return; window.__pfListing = true; // REQ1: loaded twice = set up once
 
   var doc = document;
   var win = window;
@@ -77,11 +78,7 @@
   function off(card) { return card.mrp > card.price ? (card.mrp - card.price) / card.mrp : 0; }
 
   /** 100000 -> "₹1,00,000" (Indian grouping, like toLocaleString("en-IN")). */
-  function inr(value) {
-    var digits = String(Math.abs(Math.round(value)));
-    if (digits.length > 3) digits = digits.slice(0, -3).replace(/\B(?=(\d{2})+$)/g, ',') + ',' + digits.slice(-3);
-    return '₹' + digits;
-  }
+  function inr(value) { return win.PratyangiMoney(value); } // the shared price format (site.js)
 
   function toggle(list, value) {
     var at = list.indexOf(value);
@@ -400,7 +397,7 @@
   }
 
   var bar = node('div', 'pf_lbar');
-  barSort = node('button', '', 'Sort By');
+  barSort = node('button', '', 'Sort');
   barSort.type = 'button';
   barSort.setAttribute('aria-haspopup', 'dialog');
   barSort.addEventListener('click', function () { show('sort', barSort); });
@@ -411,10 +408,25 @@
   filterCount.hidden = true;
   barFilter.appendChild(filterCount);
   barFilter.addEventListener('click', function () { show('filter', barFilter); });
+  // UI9: a small icon before each label (sort arrows, filter sliders)
+  var barIcon = function (btn, paths) {
+    btn.insertAdjacentHTML('afterbegin', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' + paths + '</svg>');
+  };
+  barIcon(barSort, '<path d="m3 16 4 4 4-4"/><path d="M7 20V4"/><path d="m21 8-4-4-4 4"/><path d="M17 4v16"/>');
+  barIcon(barFilter, '<path d="M4 6h10"/><path d="M18 6h2"/><circle cx="16" cy="6" r="2"/><path d="M4 18h4"/><path d="M12 18h8"/><circle cx="10" cy="18" r="2"/>');
   bar.appendChild(barSort);
   bar.appendChild(barFilter);
   doc.body.appendChild(scrim);
   doc.body.appendChild(bar);
+  // UI9b: the pill and the WhatsApp button (html.pf_chromeHide) slide away on scroll down > 24px or while the footer is in view; back on scroll up
+  var lastY = win.pageYOffset || 0, footSeen = false;
+  var setHide = function (on) { doc.documentElement.classList.toggle('pf_chromeHide', on); };
+  win.addEventListener('scroll', function () {
+    var y = win.pageYOffset || 0;
+    if (y - lastY > 24) { setHide(true); lastY = y; } else if (y < lastY) { setHide(footSeen); lastY = y; }
+  }, { passive: true });
+  var foot = doc.querySelector('footer'); // outside the listing root, so not qs()
+  if (foot && 'IntersectionObserver' in win) new IntersectionObserver(function (es) { footSeen = es[0].isIntersecting; if (footSeen) setHide(true); }).observe(foot);
 
   var intro = qs('._4HCqHa_intro');
   if (intro) {

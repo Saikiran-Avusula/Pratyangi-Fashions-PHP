@@ -94,7 +94,7 @@ $t->test('mock fixture through the service: filters, paging, totals', function (
     $t->same([2, 5, '4'], [count($page['page']['products']), $page['page']['total'], $page['page']['nextCursor']]);
     $t->same(2, $service->list(['category' => 'KURTIS'] + $q)['page']['total'], 'category is case-insensitive exact');
     $t->same(1, $service->list(['q' => 'maroon'] + $q)['page']['total'], 'q searches colour');
-    $t->same(5, $service->list(['q' => 'mock-'] + $q)['page']['total'], 'q searches sku');
+    $t->same(0, $service->list(['q' => 'mock-'] + $q)['page']['total'], 'q does not search the sku (a typed word must start a word of name, fabric, category or colour)');
     $t->same([], $service->list(['cursor' => '999'] + $q)['page']['products']);
     Helpers::rmTree($dir);
 });
@@ -161,7 +161,7 @@ $t->test('ERP off is the "not available yet" 503; ttl 0 never caches', function 
 });
 
 $t->test('unusable cache folder fails open', function () use ($t, $mock, $q): void {
-    $file = (string) tempnam(sys_get_temp_dir(), 'pfx');
+    $file = (string) tempnam(Tmp::base(), 'pfx');
     $service = new CatalogService($mock(), new CatalogCache($file . '/sub', 60, new FixedClock()));
     $t->same(5, $service->list($q)['page']['total']);
     unlink($file);

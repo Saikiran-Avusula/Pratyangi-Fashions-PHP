@@ -6,6 +6,7 @@
  */
 (function (win) {
   'use strict';
+  if (window.__pfOffers) return; window.__pfOffers = true; // REQ1: loaded twice = set up once
 
   function call(method, body) {
     var init = { method: method, credentials: 'include', headers: { 'Content-Type': 'application/json' }, keepalive: true };

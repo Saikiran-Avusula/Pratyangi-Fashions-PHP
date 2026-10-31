@@ -18,14 +18,10 @@ final class CatalogHtml
             . ($retry ? '<button type="button" data-pf="retry">Try again</button>' : '') . '</div>';
     }
 
-    /** 100000 -> "₹1,00,000" (the web's `₹${value.toLocaleString("en-IN")}`, whole rupees). */
+    /** 100000 -> "₹1,00,000": the shared price format (View::rs). */
     public static function inr(int $rupees): string
     {
-        $digits = (string) abs($rupees);
-        if (strlen($digits) > 3) {
-            $digits = preg_replace('/\B(?=(\d{2})+$)/', ',', substr($digits, 0, -3)) . ',' . substr($digits, -3);
-        }
-        return ($rupees < 0 ? '-' : '') . '₹' . $digits;
+        return View::rs($rupees);
     }
 
     /**

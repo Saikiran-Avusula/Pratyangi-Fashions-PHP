@@ -20,8 +20,7 @@ if ($chrome === null) {
 }
 $pdo = DbGuard::connect();
 $t = new TestCase('browser_empty_state_test');
-$tmp = sys_get_temp_dir() . '/pf_empty_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_empty_');
 $router = BrowserRig::router($tmp);
 
 // a signed-in customer without orders or addresses, for the account pages
@@ -35,7 +34,7 @@ const f = document.getElementById('f');
 f.onload = () => setTimeout(() => {
   const d = f.contentDocument, main = d.querySelector('main');
   const empties = [...d.querySelectorAll('.pf_emptyState')].filter(e => e.checkVisibility());
-  const skip = 'header, footer, nav, .pf_topbar, .pf_cookie, .pf_wa, .pf_emptyState, script, style, [data-pf="search-scrim"], [data-pf="menu-panel"]';
+  const skip = 'header, footer, nav, .BpPmcW_intro, .pf_topbar, .pf_cookie, .pf_wa, .pf_emptyState, script, style, [data-pf="search-scrim"], [data-pf="menu-panel"]';
   const stray = [];
   for (const e of main.querySelectorAll('*')) {
     if (e.closest(skip) || !e.checkVisibility()) continue;

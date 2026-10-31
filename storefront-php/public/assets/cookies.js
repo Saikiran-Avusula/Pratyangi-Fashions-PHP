@@ -8,6 +8,7 @@
  */
 (function (win) {
   'use strict';
+  if (window.__pfCookies) return; window.__pfCookies = true; // REQ1: loaded twice = set up once
 
   var doc = win.document;
   var NAME = 'pf_consent';

@@ -66,8 +66,7 @@ if (getenv('PF_TEST_DEMO_UI') === 'true') { // the preview screens (UI6)
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('browser_layout_test');
-$tmp = sys_get_temp_dir() . '/pf_layout_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_layout_');
 $router = BrowserRig::router($tmp);
 
 $clock = new FixedClock((float) time());
@@ -79,6 +78,16 @@ $t->same(201, $signup->status(), 'test account');
 // the page that walks through $pages inside an iframe and prints the findings as JSON between two markers
 $js = <<<'JS'
 const sleep = ms => new Promise(r => setTimeout(r, ms));
+// deterministic measuring: fonts ready and no finite animation running (a cross-document view transition, a dialog fading in).
+// During a view transition hit tests land on <html>, which once showed up as tap findings "hit html" on the Quick View page (FONTS1).
+async function settle(w) {
+  try { await Promise.race([w.document.fonts.ready, sleep(3000)]); } catch (e) { /* no fonts API: measure anyway */ }
+  for (let i = 0; i < 60; i++) {
+    const busy = w.document.getAnimations({ subtree: true }).some(a => a.playState === 'running' && a.effect && Number.isFinite(a.effect.getComputedTiming().endTime));
+    if (!busy) return;
+    await sleep(50);
+  }
+}
 const sel = el => { let s = el.tagName.toLowerCase(); if (el.id) s += '#' + el.id; const c = (typeof el.className === 'string' ? el.className : '').trim().split(/\s+/).filter(Boolean).slice(0, 2); return c.length ? s + '.' + c.join('.') : (el.parentElement ? sel(el.parentElement) + '>' : '') + s; };
 const TAP = 'a[href],button,[role=tab],[role=button],summary,select,textarea,input:not([type=hidden])';
 // a small control passes when the 44x44 square around its centre hits it (or its ::after, or its label) and nothing else: an invisible tap area
@@ -142,8 +151,9 @@ const log = o => fetch('/__p', { method: 'POST', body: JSON.stringify(o) }).catc
     if (!loaded) res.push([name, 'timeout', 'the page did not finish loading in 30 s', '']);
     else {
       await sleep(700);
+      await settle(f.contentWindow);
       let ok = true;
-      try { if (step) { new Function('w', step)(f.contentWindow); await sleep(500); } } catch (e) { res.push([name, 'step', String(e), '']); ok = false; }
+      try { if (step) { new Function('w', step)(f.contentWindow); await sleep(500); await settle(f.contentWindow); } } catch (e) { res.push([name, 'step', String(e), '']); ok = false; }
       if (ok) {
         const signedIn = !!f.contentDocument.querySelector('.pSCCwa_accountLink');
         for (const [kind, s, info] of measure(f.contentWindow)) res.push([name, kind, s, info, signedIn]);
@@ -160,7 +170,8 @@ JS;
 function layout_launch(array &$r, string $chrome, int $w, int $start): void
 {
     $r['proc'] = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=400000', '--window-size=' . max($w + 40, 520) . ',1000',
-        '--user-data-dir=' . $r['dir'] . '/profile' . $start, '--dump-dom', 'http://127.0.0.1:' . $r['port'] . '/__w?s=' . $start], [['null'], ['file', $r['dir'] . '/out' . $start . '.txt', 'w'], ['file', $r['dir'] . '/err' . $start . '.log', 'w']], $pipes); // files, not pipes: a pipe read blocks on Windows and would freeze the watchdog
+        '--user-data-dir=' . Tmp::profile('w' . $w . '_' . $start), '--dump-dom', 'http://127.0.0.1:' . $r['port'] . '/__w?s=' . $start], [['null'], ['file', $r['dir'] . '/out' . $start . '.txt', 'w'], ['file', $r['dir'] . '/err' . $start . '.log', 'w']], $pipes); // files, not pipes: a pipe read blocks on Windows and would freeze the watchdog
+    Tmp::track($r['proc']);
     $r['last'] = microtime(true);
 }
 
@@ -260,9 +271,18 @@ foreach ($quick ? [true] : [false, true] as $signedIn) {
                 // no sign of life for 30 s (or Chrome died): that page failed; start again after it
                 $i = $r['begin'][0] ?? -1;
                 $name = $r['begin'][1] ?? 'start of the run';
-                $found[$name . '|' . $w . '|' . $label . '|timeout|no answer in 30 s'] = $running ? 'the page hung (no progress for 30 s)' : 'Chrome stopped while measuring this page';
-                $say(sprintf('HANG %-22s %4dpx %-3s no progress for 30 s: killed, continuing with the next page', $name, $w, $label));
                 layout_kill($r);
+                // FONTS1: a freshly started headless Chrome sometimes stalls on its first page (no page fault): retry that page once, report only a second hang
+                $retryAt = max($i, 0);
+                if (empty($r['retried'][$retryAt])) {
+                    $r['retried'][$retryAt] = true;
+                    $say(sprintf('RETRY %-21s %4dpx %-3s no progress for 30 s: Chrome restarted on the same page', $name, $w, $label));
+                    $r['begin'] = null;
+                    layout_launch($r, $chrome, $w, $retryAt);
+                    continue;
+                }
+                $found[$name . '|' . $w . '|' . $label . '|timeout|no answer in 30 s'] = $running ? 'the page hung twice (no progress for 30 s)' : 'Chrome stopped twice while measuring this page';
+                $say(sprintf('HANG %-22s %4dpx %-3s no progress for 30 s twice: killed, continuing with the next page', $name, $w, $label));
                 if ($i + 1 >= count($pages)) {
                     $r['finished'] = true;
                     $r['done'] = true;

@@ -15,7 +15,7 @@ $account = $account ?? null;
 if ($hint !== '') {
     $found = $hint === 'No products found';
     $icon = 'search';
-    $title = $found ? 'No products found' : 'Search the catalogue';
+    $title = $found ? "No products found for '" . $q . "'" : 'Search the catalogue';
     $line = $found ? 'Try another word, or browse our collections.' : $hint;
     $actions = [['Start shopping', '/new-arrivals']];
     require dirname(__DIR__) . '/partials/empty_state.php';

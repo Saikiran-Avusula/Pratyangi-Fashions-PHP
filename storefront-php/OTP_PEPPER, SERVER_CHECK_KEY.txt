@@ -1,0 +1,7 @@
+PS C:\Users\Sai Kiran> -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | % {[char]$_})
+8mcu03PotlW9nOIDiBVxk5RMy1qQbvLeXjgzrCJfhFwYA2KE
+PS C:\Users\Sai Kiran> -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | % {[char]$_})
+4Isu7RLynk093XxQzSrOgbtplCHhqBaZfAYDFMmVTjWUGK1v
+PS C:\Users\Sai Kiran> -join ((48..57)+(65..90)+(97..122) | Get-Random -Count 48 | % {[char]$_})
+3rGx0HLMhZkYB7JOStjdlVEcDfUWuq2K8QiR1zmXwovF5PIA
+PS C:\Users\Sai Kiran>

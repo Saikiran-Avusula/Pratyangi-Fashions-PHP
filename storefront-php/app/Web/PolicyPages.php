@@ -40,7 +40,7 @@ final class PolicyPages
             'scripts' => ['site.js', 'bag.js'],
         ]));
         if ($request->cookie(self::COOKIE) !== null) {
-            $response->setHeader('Cache-Control', 'private, no-store')->appendHeader('Vary', 'Cookie'); // the header differs per visitor
+            $response->setHeader('Cache-Control', 'private, no-cache')->appendHeader('Vary', 'Cookie'); // the header differs per visitor; no-cache keeps Back instant (NAV1)
         }
         return $response;
     }

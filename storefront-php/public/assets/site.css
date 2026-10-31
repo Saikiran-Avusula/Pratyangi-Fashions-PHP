@@ -256,7 +256,7 @@ button:not(:disabled), [role="button"], summary, label[for], select, input[type=
 .pf_wa:focus-visible { outline: 2px solid var(--gold, #b77001); outline-offset: 3px; }
 @media (min-width: 701px) { .pf_wa { width: 70px; height: 70px; } }
 /* out of the way of an open menu, search, quick view or address dialog (they lock the page scroll), and of the checkout form */
-body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden]), .pf_qv_scrim, .FVHMJa_page) .pf_wa { display: none; }
+body[style*="overflow: hidden"] .pf_wa, body:has(.pf_qv_scrim:not([hidden]), .FVHMJa_page, .BpPmcW_page, .pnvDaq_page) .pf_wa { display: none; } /* UI9: an open menu is html.pf_locked (see the end of this file) */
 @media (max-width: 767px) {
   /* above the sticky Add to bag / Proceed to Checkout button */
   body:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled)) .pf_wa { bottom: calc(var(--pf-cookie-h, 0px) + 84px + env(safe-area-inset-bottom)); }
@@ -424,8 +424,8 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 
 /* ---- UI7a: search overlay. Phone and tablet: a full-screen sheet that slides down. From 1024px: a panel under the header, on the right. ---- */
 .pSCCwa_scrim[data-pf="search-scrim"] { align-items: flex-start; justify-content: stretch; padding: 0; }
-.pSCCwa_dialog.pf_sd { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border-radius: 0; background: #fff; overflow: hidden; animation: pf_sdIn 0.28s ease-out; }
-@keyframes pf_sdIn { from { transform: translateY(-28px); opacity: 0; } }
+.pSCCwa_dialog.pf_sd { box-sizing: border-box; display: flex; flex-direction: column; width: 100%; max-width: none; height: 100dvh; max-height: none; margin: 0; padding: 0; border-radius: 0; background: #fff; overflow: hidden; animation: pf_sdIn 0.2s ease-out; }
+@keyframes pf_sdIn { from { transform: translateY(-12px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .pSCCwa_dialog.pf_sd { animation: none; } }
 .pf_sbar { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px 10px 16px; padding-top: max(10px, env(safe-area-inset-top)); border-bottom: 1px solid #eadfc8; background: #fffbea; }
 .pf_sfield.pSCCwa_searchField { flex: 1; min-width: 0; gap: 0; padding: 0 2px 0 4px; border: 1px solid #d9d2c5; border-radius: 999px; background: #fff; }
@@ -457,8 +457,6 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 }
 
 /* ---- UI7a: an empty bag shows the shared empty state and nothing else: no title row, summary, coupon, recommendations or promises ---- */
-.BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) :is(.BpPmcW_titleRow, .BpPmcW_intro, .BpPmcW_summary, .BpPmcW_assurance, .BpPmcW_status, .BpPmcW_recommended, .OL4btW_section, .BpPmcW_continue) { display: none !important; }
-.BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_layout { display: grid; min-height: min(70vh, 560px); place-items: center; }
 
 /* ---- UI7a part 2: account overview (recent orders, wishlist strip) ---- */
 .pf_statLink { color: inherit; text-decoration: none; }
@@ -565,3 +563,308 @@ body[style*="overflow: hidden"] .pf_wa, body:has(.pSCCwa_menuPanel:not([hidden])
 .pf_avatarWrap { position: relative; display: inline-block; flex: none; }
 .pf_camBadge { position: absolute; right: 2px; bottom: 2px; display: grid; place-items: center; width: 28px; height: 28px; border: 2px solid #fff; border-radius: 50%; background: #fff; color: #3b2b27; box-shadow: 0 1px 4px #0003; }
 .pf_camBadge::after { content: ""; position: absolute; inset: -8px; }
+
+/* UI8: the page keeps the scrollbar's space, so locking the scroll for the search or the menu moves nothing */
+html { scrollbar-gutter: stable; }
+
+/* ---- UI8: count badges, desktop account box, phone header + tab bar ---- */
+.pSCCwa_count[hidden] { display: none; }
+/* one badge on every icon: top-right corner of the 24px icon */
+.pSCCwa_count { min-width: 16px; height: 16px; padding: 0 3px; box-sizing: border-box; font-size: 10px; line-height: 16px; }
+.pSCCwa_headerActions .pSCCwa_accountText { display: none !important; } /* the avatar sits in the same 44px box as the wishlist and bag icons; the name is its title */
+.pSCCwa_headerActions > .pSCCwa_accountLink { width: 44px; min-width: 44px; height: 44px; padding: 0; }
+.pf_tray { display: none; }
+@media (max-width: 425px) {
+  .pSCCwa_headerInner { display: grid; grid-template-columns: 44px 1fr 44px; gap: 0; padding: 0 4px; }
+  .pSCCwa_shopToggle { justify-self: start; }
+  .pSCCwa_shopToggle > span:not(.pSCCwa_menuIcon), .pSCCwa_shopToggle > svg { display: none; }
+  .pSCCwa_brand { justify-self: center; margin: 0; min-width: 0; gap: 6px; }
+  .pSCCwa_brandLogo { width: 36px; height: 36px; }
+  .pSCCwa_brandLogo img { width: 36px; height: 36px; }
+  .pSCCwa_brandName { font-size: 11px !important; letter-spacing: 0.02em; }
+  .pSCCwa_brandTagline { font-size: 8px !important; letter-spacing: 0.01em; }
+  .pSCCwa_headerActions { justify-self: end; margin: 0; }
+  .pSCCwa_headerActions > :not(.pSCCwa_searchButton) { display: none; }
+  .pf_tray { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: grid; grid-template-columns: repeat(4, 1fr); height: calc(56px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; background: #fff; border-top: 1px solid #eadfc8; box-shadow: 0 -2px 10px #0000000f; view-transition-name: pf-tray; }
+  .pf_trayTab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #6b5b57; text-decoration: none; font-size: 11px; line-height: 1.2; }
+  .pf_trayTab.pf_trayOn { color: var(--wine, #800020); font-weight: 600; }
+  .pf_trayIcon { position: relative; display: grid; place-items: center; width: 24px; height: 24px; }
+  .pf_trayIcon .pSCCwa_avatar { width: 24px; height: 24px; font-size: 12px; }
+  .pf_trayIcon .pSCCwa_count { top: 0; left: 100%; right: auto; transform: translate(-50%, -50%); }
+  body:has(.pf_tray) { --pf-tray-h: calc(56px + env(safe-area-inset-bottom)); padding-bottom: var(--pf-tray-h); }
+  /* out of the way of the keyboard and of any open sheet or overlay (they lock the scroll) */
+  body.pf_kb, body[style*="overflow: hidden"] { --pf-tray-h: 0px; padding-bottom: 0; }
+  body.pf_kb .pf_tray, body[style*="overflow: hidden"] .pf_tray { display: none; }
+  /* sticky bars and the WhatsApp button sit above the tray */
+  .pf_wa, body:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled)) .pf_wa { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px) + 84px); }
+  body:not(:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled), .pf_lbar, .pf_dSticky)) .pf_wa { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px) + 16px); }
+  .udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled) { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px) + 12px); }
+  .pf_lbar, .pf_dSticky { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px)); padding-bottom: 10px; }
+}
+/* page switches through the tab bar: a 200ms cross-fade (no motion when reduced) */
+@media (max-width: 425px) and (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 200ms; }
+}
+body.pf_filterOpen .pf_tray { display: none; }
+
+/* ---- UI8: an empty page is the title and ONE empty-state block, centred between the title and the footer / tab bar ----
+   --pf-head is the strip above the page (top bar + header). The block has no padding of its own; the page fills the screen and the footer sits below it. */
+:root { --pf-head: 94px; }
+.pf_emptyState { min-height: 0; padding: 0; margin: auto; width: auto; max-width: min(420px, 100%); }
+.BpPmcW_page:has([data-pf="bag-items"] > .pf_emptyState) :is(.BpPmcW_continue, [data-pf="bag-lead"], .BpPmcW_panels, .BpPmcW_status, .BpPmcW_recommended, .OL4btW_section, [data-pf="bag-notices"]) { display: none !important; }
+.BpPmcW_bag:has([data-pf="bag-items"] > .pf_emptyState), .pnvDaq_main:has(.pf_emptyState), ._4HCqHa_catalog:has(.pf_emptyState) { display: flex; flex-direction: column; min-height: calc(100dvh - var(--pf-head) - var(--pf-tray-h, 0px)); padding-bottom: 0; }
+.BpPmcW_bag:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_layout, .BpPmcW_bag:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_items,
+._4HCqHa_catalog:has(.pf_emptyState) ._4HCqHa_listing, .pnvDaq_main:has(.pf_emptyState) .pnvDaq_layout { flex: 1; display: flex; flex-direction: column; align-items: stretch; margin-top: 0; }
+@media (min-width: 961px) { .pnvDaq_main:has(.pf_emptyState) .pnvDaq_layout { flex-direction: row; } }
+.pnvDaq_main:has(.pf_emptyState) .pnvDaq_content { flex: 1; display: grid; }
+.BpPmcW_items:has(> .pf_emptyState) { padding: 0; }
+.BpPmcW_bag:has([data-pf="bag-items"] > .pf_emptyState) .BpPmcW_intro { margin-bottom: 0; }
+.pnvDaq_content:has(.pf_emptyState) .pf_wishSignIn { display: none; }
+
+/* breadcrumb and the wishlist banner / count / sort (docs/figma/update/Pratyangi Fashions Wishlist.png) */
+.pf_crumb { display: none; }
+@media (min-width: 768px) {
+  .pf_crumb { display: flex; align-items: center; gap: 10px; margin: -39px 0 21px; font: 400 14px/1 var(--font-body, inherit); color: #5a5248; }
+  .pf_crumb a { display: inline-flex; align-items: center; min-width: 44px; min-height: 44px; color: inherit; text-decoration: none; } /* a 44px tap area */
+  .pf_crumb [aria-current] { color: var(--burgundy, #800020); font-weight: 600; }
+}
+.pf_wishTools[hidden] { display: none; }
+.pf_wishBanner { display: flex; align-items: center; gap: 14px; margin: 0 0 24px; padding: 14px 20px; border: 1px solid #eadfc8; background: #fdf1f3; color: #5a5248; font: 400 16px/1.4 var(--font-body, inherit); }
+.pf_wishBanner svg { flex: none; box-sizing: content-box; padding: 8px; border-radius: 50%; background: #f9d9de; color: var(--burgundy, #800020); fill: currentColor; }
+.pf_wishBanner span { display: grid; }
+.pf_wishBanner strong { color: var(--burgundy, #800020); font-weight: 500; }
+.pf_wishBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 16px; font: 400 16px/1 var(--font-body, inherit); color: #3b2b27; }
+.pf_wishBar select { min-height: 44px; margin-left: 8px; padding: 0 12px; border: 1px solid #e6e2dc; border-radius: 4px; background: #fff; font: inherit; }
+
+/* browser autofill keeps the field's own look; long values scroll inside the field */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, select:-webkit-autofill, textarea:-webkit-autofill { -webkit-box-shadow: 0 0 0 1000px #fff inset; box-shadow: 0 0 0 1000px #fff inset; -webkit-text-fill-color: #000; caret-color: #000; transition: background-color 600000s 0s; }
+input, textarea { text-overflow: clip; min-width: 0; }
+.pnvDaq_main:has(.pf_emptyState) .pnvDaq_content { grid-template-columns: minmax(0, 1fr); }
+.pf_wishlist:has(> .pf_emptyState) { display: contents; }
+.P71-SG_panel:has(> .pf_emptyState) { display: contents; }
+.P71-SG_panel:has(> .pf_emptyState) > .P71-SG_panelHead { display: none; }
+@media (max-width: 425px) { .pSCCwa_brandTagline { display: block !important; } }
+.pf_wishBar label { display: flex; align-items: center; white-space: nowrap; }
+.pf_wishCount { white-space: nowrap; }
+.pf_wishBar select { max-width: 170px; }
+@media (max-width: 360px) { .pf_wishBar select { max-width: 142px; } }
+.pf_emptyState h2, .pf_emptyState p { text-wrap: balance; } /* no lone last word */
+
+/* ---- UI9: fixes from real-device screenshots ---- */
+/* 1. a menu, sheet or overlay is open (site.js lockScroll sets html.pf_locked): the bottom bars and the WhatsApp button step aside, and come back on close */
+html.pf_locked .pf_lbar, html.pf_locked .pf_tray, html.pf_locked .pf_wa, body.pf_filterOpen .pf_lbar, body.pf_filterOpen .pf_wa { display: none !important; }
+/* 2. phone bottom chrome: Sort/Filter bar 44px directly on the tray, WhatsApp 48px above both, 12px margin; the page keeps room for all of it */
+@media (max-width: 767px) {
+  body:has(.pf_lbar) { --pf-lbar-h: 44px; }
+  .pf_lbar { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px)); padding-bottom: env(safe-area-inset-bottom); border-top: 0; box-shadow: inset 0 1px 0 #eadfc8, 0 -2px 8px #00000014; } /* the 1px divider is drawn inside the 44px */
+  body:has(.pf_tray) .pf_lbar { padding-bottom: 0; } /* the tray below already keeps the safe area */
+  .pf_lbar button { min-height: 44px; height: 44px; gap: 6px; font: 500 12px/1 var(--font-body, inherit); letter-spacing: 0.04em; }
+  .pf_lbar button + button { border-left: 1px solid #eadfc8; }
+  .pf_lbar svg { width: 16px; height: 16px; flex: none; }
+  .pf_lcount { min-width: 18px; height: 18px; font-size: 10px; }
+  .pf_wa, body:has(.pf_lbar) .pf_wa, body:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled)) .pf_wa, body:not(:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled), .pf_lbar, .pf_dSticky)) .pf_wa {
+    width: 48px; height: 48px; right: calc(12px + env(safe-area-inset-right));
+    bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px) + var(--pf-lbar-h, 0px) + 12px); }
+  body:not(:has(.pf_tray)) .pf_wa { margin-bottom: env(safe-area-inset-bottom); }
+  body:has(.udK_nG_add:not(.pf_wishText), .BpPmcW_checkout:not(:disabled), .pf_dSticky) .pf_wa { bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, 0px) + 84px); }
+  .pf_wa img { width: 24px; height: 24px; }
+  [data-pf="listing"] { padding-bottom: calc(var(--pf-lbar-h, 0px) + 48px + 24px); } /* the last row's prices and buttons stay clear of the bar and the button */
+}
+/* 3. product card: one out-of-stock badge (top-left), heart + eye 36px stacked top-right 8px apart, name 2 lines at a fixed height so prices align */
+.JEjkwq_actions { gap: 8px; top: 12px; right: 12px; } /* 12px from the corner keeps each 44px tap area inside the clipped picture */
+.JEjkwq_actionBtn, .JEjkwq_actionBtn:is(*) { width: 36px; height: 36px; }
+.JEjkwq_soldOutBadge { top: 12px; left: 12px; max-width: calc(100% - 36px - 32px); padding: 3px 8px; overflow: hidden; font-size: 10px; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
+.JEjkwq_meta { display: grid; grid-template-rows: auto auto; align-content: start; gap: 4px; }
+.JEjkwq_meta h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; line-height: 1.35 !important; height: calc(2 * 1.35em); }
+@media (max-width: 767px), (hover: none) { .JEjkwq_addToCart { display: none; } } /* phones: no button over the picture; the card opens the product */
+/* 4. phone tab bar: rounded top, soft shadow, a pill that slides to the active tab, filled icon, instant press feedback */
+@media (max-width: 425px) {
+  .pf_tray { border-top: 0; border-radius: 16px 16px 0 0; background: #fff; box-shadow: 0 -4px 16px #0000001a; }
+  .pf_trayPill { position: absolute; left: 0; top: 6px; width: 25%; height: 30px; pointer-events: none; transform: translateX(calc(var(--pf-tab, 0) * 100%)); transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .pf_trayPill[hidden] { display: none; }
+  .pf_trayPill::before { content: ""; display: block; width: 56px; height: 100%; margin: 0 auto; border-radius: 999px; background: #8000201a; }
+  .pf_trayTab { position: relative; z-index: 1; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  .pf_trayTab.pf_trayOn { color: var(--wine, #800020); font-weight: 500; }
+  .pf_trayOn svg > :first-child { fill: currentColor; }
+  .pf_trayOn svg > :not(:first-child) { stroke: #fff; }
+  .pf_trayIcon { transition: transform 120ms ease-out; }
+  .pf_trayTab:active .pf_trayIcon { transform: scale(0.86); transition-duration: 0ms; }
+  .pf_trayTab .pSCCwa_count[hidden] { display: none; }
+}
+@media (max-width: 425px) and (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 180ms; }
+  ::view-transition-group(pf-tray), ::view-transition-old(pf-tray), ::view-transition-new(pf-tray) { animation: none; } /* the tray stays put */
+}
+html { background: var(--paper, #eeedde); } /* no white flash between pages */
+@media (prefers-reduced-motion: reduce) { .pf_trayPill, .pf_trayIcon { transition: none !important; } }
+/* 5. one account shell from 961px: sidebar 298px (Figma), 28px gap, content column the rest; the sidebar is as tall as its rows */
+@media (min-width: 961px) {
+  .pnvDaq_main .pnvDaq_layout, .pnvDaq_main:has(.pf_emptyState) .pnvDaq_layout { display: grid; grid-template-columns: 298px minmax(0, 1fr); flex-direction: unset; gap: 28px; align-items: start; margin-top: 32px; }
+  .pnvDaq_main .pnvDaq_sidebar { align-self: start; height: auto; }
+  .pnvDaq_main .pnvDaq_content { align-self: stretch; min-width: 0; }
+  .pnvDaq_main .pf_crumb { margin: -39px 0 21px; }
+}
+/* 7. avatar: the initial is always drawn; the picture (when it loads) covers it, a broken picture is removed (site.js), never an empty box */
+.pSCCwa_avatar:has(> img[data-pf="avatar-img"]) > :not(img), .P71-SG_avatar:has(> img[data-pf="avatar-img"]) > :not(img) { visibility: visible; }
+.pSCCwa_avatar > img, .P71-SG_avatar > img { z-index: 1; background: transparent; }
+@media (max-width: 767px) { .pf_acctMenuAvatar { display: grid; place-items: center; background: var(--wine, #800020); } .pf_acctMenuAvatar .P71-SG_avatarInitial { color: #fff; } }
+/* 8. help FAQs: an accordion, one open at a time (details name="pf-faq"), the chevron turns */
+.pf_acct details[name="pf-faq"] { border-bottom: 1px solid #f1e9d8; }
+.pf_acct details[name="pf-faq"] summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; cursor: pointer; list-style: none; font-weight: 500; }
+.pf_acct details[name="pf-faq"] summary::-webkit-details-marker { display: none; }
+.pf_acct details[name="pf-faq"] summary::after { content: ""; flex: none; width: 8px; height: 8px; margin-right: 4px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); transition: transform 200ms ease; }
+.pf_acct details[name="pf-faq"][open] summary::after { transform: translateY(2px) rotate(225deg); }
+.pf_acct details[name="pf-faq"] p { margin: 0 0 14px; }
+.pf_acct h3:has(+ details[name="pf-faq"]) small, .pf_acct h3 small { font-size: 12px; font-weight: 400; color: #8a7f75; }
+@media (prefers-reduced-motion: reduce) { .pf_acct details[name="pf-faq"] summary::after { transition: none; } }
+/* UI9 review: the active person icon is solid; no tray shadow line under the Sort/Filter bar */
+@media (max-width: 425px) {
+  .pf_trayOn svg circle + path { fill: currentColor; stroke: currentColor; }
+}
+
+/* ---- UI9b: phones, Sort | Filter is a floating pill 12px above the tray; it and the WhatsApp button slide away on scroll down / at the footer (listing.js sets html.pf_chromeHide) ---- */
+@media (max-width: 767px) {
+  .pf_lbar { left: 50%; right: auto; width: max-content; max-width: min(280px, calc(100vw - 32px)); height: 44px; padding: 0; border: 1px solid #80002026; border-radius: 999px; overflow: hidden;
+    bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, env(safe-area-inset-bottom)) + 12px); box-shadow: 0 -4px 16px #0000001a; transform: translateX(-50%); transition: transform 180ms ease, opacity 180ms ease; }
+  body:has(.pf_tray) .pf_lbar { padding-bottom: 0; box-shadow: 0 -4px 16px #0000001a; }
+  .pf_lbar button { min-width: 0; height: 42px; min-height: 44px; padding: 0 20px; text-transform: none; font: 500 14px/1 var(--font-body, inherit); letter-spacing: 0; -webkit-tap-highlight-color: transparent; }
+  .pf_lbar button:active { background: #8000200f; }
+  .pf_lbar button + button { border-left: 1px solid #80002026; }
+  .pf_lcount { min-width: 0; height: auto; padding: 0; background: none; color: var(--burgundy, #800020); font: 600 14px/1 var(--font-body, inherit); }
+  .pf_lcount::before { content: "("; } .pf_lcount::after { content: ")"; }
+  body:has(.pf_lbar) { --pf-lbar-h: 68px; } /* 12px gap + 44px pill + 12px */
+  body:has(.pf_lbar) .pf_wa { width: 40px; height: 40px; bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, env(safe-area-inset-bottom)) + var(--pf-lbar-h) + 0px); transition: transform 180ms ease, opacity 180ms ease; }
+  body:has(.pf_lbar) .pf_wa img { width: 20px; height: 20px; }
+  html.pf_chromeHide .pf_lbar { transform: translate(-50%, calc(100% + 24px)); opacity: 0; pointer-events: none; }
+  html.pf_chromeHide body:has(.pf_lbar) .pf_wa { transform: translateY(calc(100% + 24px)); opacity: 0; pointer-events: none; }
+  [data-pf="listing"] { padding-bottom: calc(var(--pf-lbar-h, 0px) + 12px); }
+}
+@media (prefers-reduced-motion: reduce) { .pf_lbar, .pf_wa { transition: none !important; } }
+@media (max-width: 767px) { .pf_lbar button { white-space: nowrap; } .pf_lcount { display: inline; } .pf_lcount[hidden] { display: none; } } /* "Filter (2)" on one line */
+@media (max-width: 767px) { body:has(.pf_lbar) .pf_wa::after { content: ""; position: absolute; inset: -2px; } } /* 40px button, 44px tap area */
+
+/* ---- UI9c: bag on phones: floating checkout card above the tray, compact item card, summary rows on one line ---- */
+.pf_cbar { display: none; }
+@media (max-width: 767px) {
+  .pf_cbar:not([hidden]) { position: fixed; left: 12px; right: 12px; bottom: calc(var(--pf-cookie-h, 0px) + var(--pf-tray-h, env(safe-area-inset-bottom)) + 12px); z-index: 45;
+    display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: #fff; box-shadow: 0 -4px 16px #0000001a; }
+  .pf_cbarSum { display: grid; gap: 2px; min-width: 0; margin-right: auto; }
+  .pf_cbarSum strong { font: 700 18px/1.2 var(--font-body, inherit); color: #222; white-space: nowrap; }
+  .pf_cbarSum small { font: 400 12px/1.3 var(--font-body, inherit); color: #6b6b6b; white-space: nowrap; }
+  .pf_cbarSum small button { appearance: none; position: relative; padding: 0; border: 0; background: none; color: var(--burgundy, #800020); font: inherit; font-weight: 500; text-decoration: underline; cursor: pointer; }
+  .pf_cbarSum small button::after { content: ""; position: absolute; left: -6px; right: -6px; top: 50%; height: 44px; transform: translateY(-50%); } /* 44px tap area */
+  .pf_cbarGo { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 18px; border: 0; border-radius: 8px; background: var(--burgundy, #800020); color: #fff; font: 600 15px/1 var(--font-body, inherit); white-space: nowrap; text-decoration: none; }
+  .pf_cbarGo:active { filter: brightness(0.9); }
+  .pf_cbarGo:disabled { background: #6b6b66; }
+  /* the summary's own button stays in the summary (not fixed) */
+  .BpPmcW_checkout:not(:disabled), .BpPmcW_checkout[data-total]:not(:disabled) { position: static; width: 100%; height: auto; min-height: 48px; box-shadow: none; }
+  .BpPmcW_checkout[data-total]:not(:disabled)::before { content: none; }
+  body:has(.pf_cbar:not([hidden])) .BpPmcW_page { padding-bottom: calc(68px + 24px); } /* the card (68px) + its gap, above the tray padding */
+  /* item card: picture left (top), then name, variant, price row, then the actions */
+  .BpPmcW_item { display: grid; grid-template-columns: 96px minmax(0, 1fr); column-gap: 12px; row-gap: 6px; align-items: start; }
+  .BpPmcW_item > .BpPmcW_photo { grid-row: 1 / span 4; width: 96px; height: auto; aspect-ratio: 3 / 4; align-self: start; }
+  .BpPmcW_item > .BpPmcW_info { display: contents; }
+  .BpPmcW_details { order: 1; grid-column: 2; min-width: 0; }
+  .BpPmcW_details h2 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; margin: 0; font-size: 15px; line-height: 1.35; }
+  .BpPmcW_details p { margin: 2px 0 0; font-size: 13px; }
+  .BpPmcW_item > .BpPmcW_price { order: 2; grid-column: 2; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin: 0; }
+  .BpPmcW_info > .BpPmcW_status { order: 3; grid-column: 2; }
+  .BpPmcW_actions { order: 4; grid-column: 2; display: grid; gap: 6px; margin: 0; }
+  .BpPmcW_quantity { justify-self: start; }
+  .BpPmcW_quantity button { position: relative; width: 32px; height: 32px; min-height: 32px; }
+  .BpPmcW_quantity output { min-width: 32px; height: 32px; line-height: 32px; text-align: center; }
+  .BpPmcW_secondary { display: flex; flex-wrap: nowrap; gap: 16px; }
+  .BpPmcW_secondary button { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0; font-size: 13px; white-space: nowrap; position: relative; }
+  .BpPmcW_secondary button::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 44px; transform: translateY(-50%); }
+  .BpPmcW_secondary img { width: 16px; height: 16px; }
+  /* order summary rows on one line */
+  .BpPmcW_breakdown > div, .BpPmcW_total { display: flex; justify-content: space-between; gap: 8px; white-space: nowrap; }
+  .BpPmcW_status { white-space: normal; }
+}
+@media (max-width: 767px) {
+  .BpPmcW_actions { display: contents; }
+  .BpPmcW_quantity { order: 4; grid-column: 2; }
+  .BpPmcW_secondary { order: 5; grid-column: 1 / -1; justify-content: flex-start; gap: 20px; padding-top: 4px; border-top: 1px solid #f1e9d8; } /* one row under the card, full width */
+  .BpPmcW_secondary button { font-size: 12px; }
+  .BpPmcW_item > .BpPmcW_price span { font-size: 12px; padding: 2px 6px; }
+}
+@media (max-width: 767px) { .BpPmcW_total + .BpPmcW_status { font-size: 13px; white-space: nowrap; } } /* "Delivery charges are added at checkout" on one line at 320 */
+@media (max-width: 767px) { .BpPmcW_quantity { overflow: visible; } .BpPmcW_quantity button::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); } } /* 32px stepper buttons, 44px tap areas */
+
+/* ---- UI10: phone item pictures with Quick View, size picker (sheet / popover), size guide, share, toast ---- */
+.pf_wishlist_photo { position: relative; }
+/* the eye (Quick View) on wishlist and bag pictures, every width */
+.BpPmcW_item > .BpPmcW_photo { position: relative; }
+.pf_eye { position: absolute; right: 8px; bottom: 8px; z-index: 2; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: #fffdd0eb; color: var(--ink, #222); box-shadow: 0 2px 8px #00000026; cursor: pointer; }
+.pf_eye::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+.pf_eye:hover { background: #fff; color: var(--wine, #800020); }
+@media (max-width: 767px) {
+  .pf_wishlist_row { grid-template-columns: 110px minmax(0, 1fr); align-items: start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #eadfc8; }
+  .pf_wishlist_row > .pf_wishlist_actions { grid-column: 2; }
+  .pf_wishlist_photo { grid-row: 1 / span 2; width: 110px; aspect-ratio: 3 / 4; }
+  .pf_wishlist_photo .pf_wishlist_img { width: 100%; height: 100%; aspect-ratio: auto; object-fit: cover; object-position: center top; }
+  .BpPmcW_item { grid-template-columns: 110px minmax(0, 1fr); }
+  .BpPmcW_item > .BpPmcW_photo { width: 110px; aspect-ratio: 3 / 4; position: relative; }
+  .pf_eye { position: absolute; right: 6px; bottom: 6px; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: #fffdd0eb; color: var(--ink, #222); box-shadow: 0 2px 8px #00000026; cursor: pointer; }
+  .pf_eye::after { content: ""; position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
+}
+/* sheet (phones) and popover (desktop) */
+.pf_sheetBack { position: fixed; inset: 0; z-index: 90; display: flex; align-items: flex-end; background: #00000059; }
+.pf_sheet { width: 100%; max-height: 85dvh; overflow-y: auto; box-sizing: border-box; padding: 8px 16px calc(16px + env(safe-area-inset-bottom)); border-radius: 16px 16px 0 0; background: #fff; box-shadow: 0 -4px 16px #0000001a; animation: pf_up 220ms ease-out; }
+.pf_sheetHandle { display: block; width: 40px; height: 4px; margin: 0 auto 12px; border-radius: 2px; background: #d9d2c5; }
+.pf_popBack { position: fixed; inset: 0; z-index: 90; }
+.pf_pop { position: fixed; width: 320px; box-sizing: border-box; padding: 16px; border: 1px solid #eadfc8; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px #00000026; }
+.pf_sheet h2, .pf_pop h2 { margin: 0 0 12px; font: 600 16px/1.3 var(--font-body, inherit); color: #222; }
+@keyframes pf_up { from { transform: translateY(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .pf_sheet { animation: none; } }
+.pf_sizeChips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+.pf_sizeChip { min-width: 52px; min-height: 44px; padding: 0 12px; border: 1px solid #d9d2c5; border-radius: 8px; background: #fff; color: #222; font: 500 14px/1 var(--font-body, inherit); cursor: pointer; }
+.pf_sizeChip[aria-pressed="true"] { border-color: var(--burgundy, #800020); box-shadow: 0 0 0 2px var(--burgundy, #800020); color: var(--burgundy, #800020); font-weight: 600; }
+.pf_sizeChip:disabled { background: #f4f2ee; color: #aaa; text-decoration: line-through; cursor: not-allowed; }
+.pf_sizeGuide { display: inline-flex; align-items: center; min-height: 44px; padding: 0; border: 0; background: none; color: var(--burgundy, #800020); font: 500 14px/1 var(--font-body, inherit); text-decoration: underline; cursor: pointer; }
+.pf_sheetBtn { display: block; width: 100%; min-height: 48px; margin-top: 8px; border: 0; border-radius: 8px; background: var(--burgundy, #800020); color: #fff; font: 600 15px/1 var(--font-body, inherit); cursor: pointer; }
+.pf_sheetBtn:disabled { background: #b8b3ab; cursor: not-allowed; }
+.pf_sheetNote { margin: -6px 0 10px; font-size: 12px; color: #8a7f75; }
+.pf_sizeTable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.pf_sizeTable th, .pf_sizeTable td { padding: 8px 6px; border-bottom: 1px solid #f1e9d8; text-align: left; }
+.pf_shareItem { display: flex; align-items: center; width: 100%; min-height: 48px; padding: 0 4px; border: 0; border-bottom: 1px solid #f1e9d8; background: none; color: #222; font: 500 15px/1 var(--font-body, inherit); text-align: left; text-decoration: none; cursor: pointer; }
+.pf_qv .pf_share { min-height: 44px; border: 1px solid #d9d2c5; border-radius: 6px; background: #fff; color: #222; font: inherit; cursor: pointer; }
+.pf_toast { position: fixed; left: 50%; bottom: calc(var(--pf-tray-h, 0px) + 24px + env(safe-area-inset-bottom)); z-index: 95; transform: translateX(-50%); padding: 10px 16px; border-radius: 999px; background: #222; color: #fff; font: 500 14px/1.2 var(--font-body, inherit); box-shadow: 0 6px 18px #00000040; white-space: nowrap; }
+.BpPmcW_status > button { min-height: 44px; } /* UI10 layout check: "Change to N" is a 44px tap target */
+
+/* ---- NAV1: page switches at every width: the bars stay still, only the content cross-fades (160ms); reduced motion = no transition ---- */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition { navigation: auto; }
+  .pf_topbar { view-transition-name: pf-topbar; }
+  .pSCCwa_header { view-transition-name: pf-header; }
+  .pnvDaq_sidebar { view-transition-name: pf-sidebar; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: 160ms; }
+  ::view-transition-group(pf-topbar), ::view-transition-old(pf-topbar), ::view-transition-new(pf-topbar),
+  ::view-transition-group(pf-header), ::view-transition-old(pf-header), ::view-transition-new(pf-header),
+  ::view-transition-group(pf-sidebar), ::view-transition-old(pf-sidebar), ::view-transition-new(pf-sidebar),
+  ::view-transition-group(pf-tray), ::view-transition-old(pf-tray), ::view-transition-new(pf-tray) { animation: none; }
+  ::view-transition-old(pf-topbar), ::view-transition-old(pf-header), ::view-transition-old(pf-sidebar), ::view-transition-old(pf-tray) { display: none; } /* the new bar shows at once: no double image */
+}
+/* the badges keep their box whether a number shows or not (no shift when one appears) */
+.pSCCwa_headerActions > a, .pf_trayIcon { position: relative; }
+
+/* ---- FONTS1: self-hosted Google Fonts (OFL, latin; licences in assets/fonts). Headings swap; body text is "optional" (no late swap).
+   The fallbacks are metric-adjusted Arial / Times New Roman, so a font arriving late moves nothing. ---- */
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 300; font-display: optional; src: url("fonts/poppins-latin-300.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 400; font-display: optional; src: url("fonts/poppins-latin-400.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 500; font-display: optional; src: url("fonts/poppins-latin-500.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 600; font-display: optional; src: url("fonts/poppins-latin-600.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Poppins"; font-style: normal; font-weight: 700; font-display: optional; src: url("fonts/poppins-latin-700.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Playfair Display"; font-style: normal; font-weight: 400 900; font-display: swap; src: url("fonts/playfair-display-latin-var.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* metric-matched fallbacks (values as next/font computes them for these families) */
+@font-face { font-family: "Poppins Fallback"; src: local("Arial"); size-adjust: 112.5%; ascent-override: 93%; descent-override: 31%; line-gap-override: 9%; }
+@font-face { font-family: "Playfair Display Fallback"; src: local("Times New Roman"); size-adjust: 110%; ascent-override: 98%; descent-override: 23%; line-gap-override: 0%; }
+:root { --font-body: "Poppins", "Poppins Fallback", system-ui, sans-serif; --font-display: "Playfair Display", "Playfair Display Fallback", Georgia, serif; }
+
+/* ---- LOGO1: the gold lockup (one picture: emblem + name + tagline). Phones 44px tall (the name is then 11px, the floor), from 426px 56px; width follows (3.52:1). ---- */
+.pf_lockupBox { display: block; width: auto !important; height: auto !important; }
+.pf_lockup { display: block; }
+.pf_lockup img { display: block; width: auto; height: 56px; max-width: 100%; object-fit: contain; filter: drop-shadow(0 1px 1px rgba(80, 40, 0, 0.28)); } /* a soft shadow lifts the gold off the cream */
+@media (max-width: 425px) { .pf_lockup img { height: 44px; } }
+.f_viWW_footerLogo .pf_lockup img { height: 56px; filter: none; }

@@ -19,3 +19,16 @@ All made-up data lives in `app/Demo/DemoData.php` (money in integer paise, tax r
 Price rule on every order screen: Subtotal, Discount, GST (rate and amount), Shipping, Total. The words "Inclusive of all taxes" never appear (checked by `tests/demo_ui_test.php`).
 
 Left out on purpose even in the preview: brand logos for UPI apps / cards (no licensed art here, plain text chips instead), the "Exclusive Offers" block of the membership page and its fabric photos (no data; tier cards use flat colours), photo upload in the review form (a tile that shows a toast).
+
+## Sizes (UI10) — mock until the ERP has a variant field
+
+Unlike the screens above, the size picker is live in every mode (not behind `DEMO_UI`), because the mock lives in one place that the real data will replace:
+
+| What | Mock source | Real source that replaces it |
+|---|---|---|
+| Which products have sizes, which sizes, which are sold out | `app/Catalog/Variants::sizes()` (only products whose size is S–XXL, in stock, not a saree; sizes S M L XL XXL; one size sold out, picked from the SKU's CRC32) | the ERP variant group (`design_model` / `pattern`, or a new variant field): one row per size with its own SKU and stock |
+| What the page sends to the browser | `data-sizes` (product page) / `data-qv-sizes` (cards, Quick View) = `"S:1,M:1,L:0,…"` via `Variants::attr()` | same attribute, filled from the ERP rows |
+| The bag line | id = variant SKU `"<sku>~<size>"` (`site.js` sizePicker; `bag-page.js` reads the base SKU before `~`) | the size's own ERP SKU; checkout must send that SKU (checkout does not send bag lines yet) |
+| Size guide table | DRAFT inches in `site.js` `sizeGuide()` | the shop's measurement chart |
+
+Not covered yet: the wishlist's "Move to bag" adds the plain SKU (no size picker there).

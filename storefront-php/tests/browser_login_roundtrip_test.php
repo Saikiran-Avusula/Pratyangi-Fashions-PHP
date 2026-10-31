@@ -16,8 +16,7 @@ if ($chrome === null) {
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $t = new TestCase('browser_login_roundtrip_test');
-$tmp = sys_get_temp_dir() . '/pf_rt_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_rt_');
 $router = BrowserRig::router($tmp);
 $email = 'Round.Trip' . bin2hex(random_bytes(2)) . '@Example.com'; // mixed case on purpose: the form lower-cases it
 file_put_contents($tmp . '/wrap.html', '<!doctype html><body><pre id="out">running</pre><iframe id="f" style="width:900px;height:900px"></iframe><script>

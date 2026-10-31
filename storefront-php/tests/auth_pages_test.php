@@ -210,7 +210,7 @@ $t->test('header: signed in shows the avatar, first name, link to /account, per-
     $t->contains('<a class="pSCCwa_accountLink" href="/account"', $b);
     $t->contains('aria-label="My account, signed in as asha Rao"', $b);
     $t->ok(!str_contains($b, 'aria-label="Sign in"'));
-    $t->same('private, no-store', $r->header('Cache-Control'));
+    $t->same('private, no-cache', $r->header('Cache-Control')); // NAV1: re-checked every time, but Back can use the back/forward cache
     $t->contains('Cookie', (string) $r->header('Vary'));
     // the page is still the sign-in page for a signed-in visitor (the web does not redirect)
     $t->contains('<h1 class="neurva_title">Welcome back</h1>', $b);

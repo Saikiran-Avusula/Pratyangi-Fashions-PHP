@@ -6,6 +6,7 @@
  */
 (function () {
   'use strict';
+  if (window.__pfProduct) return; window.__pfProduct = true; // REQ1: loaded twice = set up once
 
   var doc = document;
   var button = doc.querySelector('[data-pf="add-product"]');

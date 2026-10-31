@@ -143,7 +143,7 @@ $kb = [math]::Round((Get-Item $zipPath).Length / 1KB)
 
 # build check: every page and email link/asset exists, and every asset is in this zip and served from it (fails the build otherwise)
 $php = (Get-Command php).Source
-$unpacked = Join-Path ([System.IO.Path]::GetTempPath()) ('pf_build_' + [guid]::NewGuid().ToString('N'))
+$unpacked = Join-Path $(if ($env:PF_TMP_DIR) { $env:PF_TMP_DIR } else { 'E:\Testing fashion store\.tmp' }) ('pf_build_' + [guid]::NewGuid().ToString('N'))
 [System.IO.Compression.ZipFile]::ExtractToDirectory($zipPath, $unpacked)
 & $php (Join-Path $root 'tests\links_crawl_test.php') $unpacked | Select-Object -Last 3
 $checkCode = $LASTEXITCODE

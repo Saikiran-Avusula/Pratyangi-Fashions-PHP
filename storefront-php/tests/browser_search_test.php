@@ -17,8 +17,7 @@ if ($chrome === null) {
 }
 $pdo = DbGuard::connect();
 $t = new TestCase('browser_search_test');
-$tmp = sys_get_temp_dir() . '/pf_search_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_search_');
 $router = BrowserRig::router($tmp);
 
 $common = <<<'JS'
@@ -61,7 +60,7 @@ $full = $common . <<<'JS'
   key('ArrowUp'); out.up1 = d.activeElement === items()[0];
   key('ArrowUp'); out.upToBox = d.activeElement === input;
   key('Escape');
-  await sleep(100);
+  await sleep(300);
   out.closed = d.querySelector('[data-pf=search-scrim]').hidden;
   out.unpinned = d.body.style.position === '';
   d.querySelector('[data-pf=search-open]').click();

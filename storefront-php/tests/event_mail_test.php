@@ -105,15 +105,15 @@ $t->test('every email: short subject, plain-text twin, special characters right 
     $t->contains('Silk Saree #5 &amp; Border', $c['html']);
     $t->contains('Sahiti&#039;s Lane &amp; Co', $c['html']);
     $t->contains("Sahiti's Lane & Co", $c['text']);
-    $t->contains('₹3,998.00', $c['text']);
+    $t->contains('₹3,998', $c['text']);
     $t->contains('/account/orders', $c['html']);
     $r = EventTemplates::paymentReceipt($order);
     $t->contains('This is not a GST tax invoice. The tax invoice is issued at dispatch.', $r['text']);
     $t->contains('/account/orders', $r['html']);
-    $t->contains('Your refund of ₹3,998.00', EventTemplates::cancelled($order)['text']);
+    $t->contains('Your refund of ₹3,998', EventTemplates::cancelled($order)['text']);
     $t->contains('Courier', EventTemplates::shipped($order)['text']);
     $t->contains('1234567890', EventTemplates::shipped($order)['text']);
-    $t->same('₹1,00,000.00', EventTemplates::inr(10000000));
+    $t->same('₹1,00,000', EventTemplates::inr(10000000));
     $t->same('₹5.05', EventTemplates::inr(505));
 });
 

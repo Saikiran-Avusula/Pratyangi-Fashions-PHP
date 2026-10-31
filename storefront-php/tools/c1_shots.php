@@ -16,8 +16,7 @@ $chrome = BrowserRig::chrome() ?? exit("Chrome not found\n");
 $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $out = dirname(__DIR__) . '/.claude/snapshots/c1';
-$tmp = sys_get_temp_dir() . '/pf_c1_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_c1_');
 $router = BrowserRig::router($tmp);
 $clock = new FixedClock((float) time());
 $setup = Helpers::app(Helpers::config(['MAIL_LOG_PATH' => $tmp . '/setup.log', 'OTP_PEPPER' => str_repeat('S', 48)]), $clock, new DbRateLimitStore(static fn (): \PDO => $pdo), null, new LogMailer($tmp . '/setup.log', $clock), static fn (): \PDO => $pdo);
@@ -37,11 +36,12 @@ foreach ([false, true] as $signedIn) {
         foreach ([390, 1440] as $width) {
             file_put_contents($tmp . '/wrap.html', '<!doctype html><body style="margin:0;background:#888"><iframe id="f" src="' . $path . '" width="' . $width . '" height="' . $height . '" style="border:0;display:block"></iframe><script>'
                 . 'const q=s=>document.getElementById("f").contentDocument.querySelector(s);document.getElementById("f").onload=()=>setTimeout(()=>{' . $js . '},800);</script>');
-            $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--user-data-dir=' . $tmp . '/chrome', '--virtual-time-budget=6000', '--window-size=' . max($width, 500) . ',' . $height,
+            $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--user-data-dir=' . Tmp::profile(), '--virtual-time-budget=6000', '--window-size=' . max($width, 500) . ',' . $height,
                 '--screenshot=' . "{$out}/{$name}-{$width}.png", 'http://127.0.0.1:' . $port . '/__w'], [['null'], ['pipe', 'w'], ['pipe', 'w']], $pipes);
+            Tmp::track($p);
             stream_get_contents($pipes[1]);
             stream_get_contents($pipes[2]);
-            proc_close($p);
+            Tmp::kill($p);
             echo "{$name}-{$width}.png\n";
         }
     }

@@ -29,7 +29,7 @@ final class HeaderAccount
     /** The Google picture inside the initial's circle (the initial stays underneath; site.js removes a picture that fails to load). */
     public function avatarImg(): string
     {
-        return $this->picture === null ? '' : '<img data-pf="avatar-img" src="' . View::e($this->picture) . '" alt="' . View::e($this->first) . '" loading="lazy" referrerpolicy="no-referrer" width="34" height="34"/>';
+        return $this->picture === null ? '' : '<img data-pf="avatar-img" src="' . View::e($this->picture) . '" alt="' . View::e($this->first) . '" referrerpolicy="no-referrer" width="34" height="34"/>';
     }
 
     /** @param array<string,mixed> $row a customer row (name, email) */

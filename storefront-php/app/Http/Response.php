@@ -137,7 +137,7 @@ final class Response
         http_response_code($this->status);
         header_remove('X-Powered-By');
         if (str_starts_with((string) $this->header('Content-Type'), 'text/html') && !$this->hasHeader('Cache-Control')) {
-            $this->headers[] = ['Cache-Control', 'no-cache']; // pages are always re-checked; only the versioned /assets files are kept
+            $this->headers[] = ['Cache-Control', 'private, no-cache']; // pages are always re-checked; only the versioned /assets files are kept. private: the header's badges come from the visitor's pf_counts cookie (NAV1)
         }
         foreach ($this->headers as [$name, $value]) {
             header($name . ': ' . $value, true);

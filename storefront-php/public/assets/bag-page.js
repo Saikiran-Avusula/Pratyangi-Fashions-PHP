@@ -9,6 +9,7 @@
  */
 (function (win) {
   'use strict';
+  if (win.__pfBagPage) return; win.__pfBagPage = true; // REQ1: loaded twice = set up once
 
   var doc = win.document;
   var Bag = win.PratyangiBag;
@@ -22,8 +23,8 @@
 
   /* ---------------------------------------------------------------- formatting and pricing (lib/catalog.ts, lib/pricing.ts) */
 
-  function formatInr(value) { return '₹' + Math.round(value).toLocaleString('en-IN'); }
-  function formatRs(value) { return 'Rs. ' + value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function formatInr(value) { return win.PratyangiMoney(value); } // the shared price format (site.js)
+  var formatRs = formatInr;
   function discountPercent(product) { return Math.round((1 - product.priceInr / product.compareAtInr) * 100); }
   function productHref(sku) { return '/product?sku=' + encodeURIComponent(sku); }
   function lineTaxPaise(unitPaise, quantity, taxBp) { return Math.floor((unitPaise * quantity * taxBp + 5000) / 10000); }
@@ -151,10 +152,11 @@
       var product;
       if (state.catalog.status === 'ready') {
         for (var i = 0; i < state.catalog.products.length; i++) {
-          if (state.catalog.products[i].id === line.id) { product = state.catalog.products[i]; break; }
+          if (state.catalog.products[i].id === line.id.split('~')[0]) { product = state.catalog.products[i]; break; }
         }
       }
-      var item = { id: line.id, quantity: line.quantity };
+      // a sized line's id is the variant SKU "<sku>~<size>" (UI10 DEMO); the product is the base SKU
+      var item = { id: line.id, quantity: line.quantity, sku: line.id.split('~')[0], size: line.id.split('~')[1] || '' };
       if (state.catalog.status === 'loading') { item.state = 'checking'; return item; }
       if (state.catalog.status === 'error') { item.state = 'unverified'; return item; }
       if (!product) { item.state = 'gone'; return item; }
@@ -293,17 +295,19 @@
       return article;
     }
     var photo = h('div', P + 'photo');
-    photo.appendChild(fillImg(product.name, product.imagePath));
+    var pic = fillImg(product.name, product.imagePath);
+    photo.appendChild(pic);
+    quickViewData(article, photo, product, item, pic);
     article.appendChild(photo);
 
     var body = h('div', P + 'info');
     var text = h('div', P + 'details');
     var title = h('h2');
     var link = h('a', null, product.name);
-    link.setAttribute('href', productHref(item.id));
+    link.setAttribute('href', productHref(item.sku));
     title.appendChild(link);
     text.appendChild(title);
-    text.appendChild(h('p', null, product.subtitle));
+    text.appendChild(h('p', null, item.size ? product.subtitle.replace(/ · [^·]*$/, '') + ' · Size ' + item.size : product.subtitle));
     body.appendChild(text);
 
     if (item.state === 'soldOut') {
@@ -337,7 +341,7 @@
 
     var secondaryRow = h('div', P + 'secondary');
     var wish = button(' Move to Wishlist', null, function () {
-      if (win.PratyangiWishlist) win.PratyangiWishlist.add(item.id);
+      if (win.PratyangiWishlist) win.PratyangiWishlist.add(item.sku);
       removeLine(item.id);
     });
     wish.insertBefore(figmaImg('wishlist-heart.svg', 22), wish.firstChild);
@@ -421,6 +425,20 @@
     return li;
   }
 
+  // UI10: the eye on the picture opens site.js's Quick View, which reads these data-qv-* values (same as a product card)
+  function quickViewData(card, photo, product, item, pic) {
+    var qv = { sku: item.sku, name: product.name, price: formatInr(product.priceInr), mrp: product.compareAtInr > product.priceInr ? formatInr(product.compareAtInr) : '',
+      sub: product.subtitle, stock: item.state === 'soldOut' ? 'Out of stock' : 'In stock', instock: item.state === 'soldOut' ? '0' : '1',
+      img: pic.src, href: productHref(item.sku), size: item.size };
+    Object.keys(qv).forEach(function (k) { card.setAttribute('data-qv-' + k, qv[k] || ''); });
+    var eye = button('', 'pf_eye');
+    eye.setAttribute('data-pf', 'quick-view');
+    eye.setAttribute('aria-haspopup', 'dialog');
+    eye.setAttribute('aria-label', 'Quick view ' + product.name);
+    eye.appendChild(svgIcon(18, ['M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0', 'M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z']));
+    photo.appendChild(eye);
+  }
+
   function svgIcon(size, paths) {
     var ns = 'http://www.w3.org/2000/svg';
     var svg = doc.createElementNS(ns, 'svg');
@@ -486,7 +504,7 @@
       emptyNode = null;
       list.hidden = false;
       if (state.ready && items.length === 0) {
-        emptyNode = window.PratyangiEmptyState('shopping-bag', checkoutMode ? 'Your bag is empty.' : 'There are no sarees in your bag yet.', '');
+        emptyNode = window.PratyangiEmptyState('shopping-bag', checkoutMode ? 'Your bag is empty.' : 'There are no sarees in your bag yet.', 'Add a saree you love and it will wait here.');
         if (checkoutMode) {
           list.parentNode.insertBefore(emptyNode, list);
           list.hidden = true;
@@ -541,6 +559,22 @@
       next.setAttribute('data-total', formatRs(view.totalPaise / 100)); // the phone's sticky bar shows the total beside the button text
       next.appendChild(figmaImg('checkout-arrow.svg', 27));
       slot.parentNode.replaceChild(next, slot);
+      // UI9c: on phones a floating card above the tray (CSS shows it under 768px): the total, "incl. GST · View details", Checkout →
+      var bar = doc.querySelector('.pf_cbar') || doc.body.appendChild(h('div', 'pf_cbar'));
+      bar.textContent = '';
+      bar.hidden = items.length === 0;
+      var sum = h('div', 'pf_cbarSum');
+      sum.appendChild(h('strong', null, formatInr(view.totalPaise / 100)));
+      var more = h('small', null, 'incl. GST · ');
+      more.appendChild(button('View details', null, function () {
+        var box = doc.querySelector('[data-pf="total"]');
+        if (box) box.closest('div').parentNode.scrollIntoView({ behavior: win.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+      }));
+      sum.appendChild(more);
+      bar.appendChild(sum);
+      var go = ready ? h('a', 'pf_cbarGo', 'Checkout →') : button('Checkout →', 'pf_cbarGo');
+      if (ready) go.setAttribute('href', next.getAttribute('href')); else go.disabled = true;
+      bar.appendChild(go);
     }
   }
 

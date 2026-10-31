@@ -13,6 +13,7 @@
  */
 (function (root) {
   'use strict';
+  if (root.PratyangiBag) return; // REQ1: loaded twice = set up once (the delegated "Add to cart" listener included)
 
   var KEY = 'pratyangi-demo-bag';
   var EVENT = 'pratyangi-bag-change';

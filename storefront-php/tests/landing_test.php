@@ -34,9 +34,9 @@ $t->test('home renders with the shipped mock ERP: names, escaped rupee prices, h
     foreach (['Chiffon Dupatta', 'Cotton Handloom Saree', 'Kanjivaram Silk Saree', 'Printed Cotton Kurti'] as $name) {
         $t->contains($name, $b, $name);
     }
-    $t->contains('Rs. 11,499.00', $b); // Kanjivaram: offer price
-    $t->contains('<del>Rs. 14,999.00</del>', $b);
-    $t->contains('Rs. 1,199.50', $b);
+    $t->contains('₹11,499', $b); // Kanjivaram: offer price
+    $t->contains('<del>₹14,999</del>', $b);
+    $t->contains('₹1,199.50', $b);
     $t->contains('class="pSCCwa_header"', $b);
     $t->contains('class="f_viWW_footer"', $b);
     $t->contains('/assets/css/3wh3hbs4o_ca8.css', $b);
@@ -45,7 +45,7 @@ $t->test('home renders with the shipped mock ERP: names, escaped rupee prices, h
     $t->same(3, substr_count($b, '<script'), 'exactly three script tags (site.js, bag.js, cookies.js)');
     $t->contains('<script defer src="/assets/site.js"></script><script defer src="/assets/bag.js"></script>', $b, 'the page scripts: same-origin, deferred, no inline code');
     $t->same(0, preg_match('/\son[a-z]+="/i', $b), 'no inline event handler attributes');
-    $t->contains('<span class="pSCCwa_count" data-pf="bag-count">0</span></a>', $b, 'the bag icon carries the count (site.js fills it from the saved bag)');
+    $t->contains('<span class="pSCCwa_count" data-pf="bag-count" hidden>0</span></a>', $b, 'the bag icon carries the count (site.js fills it from the saved bag)');
     $t->ok(!str_contains($b, '/_next/'), 'no Next.js urls left');
     $t->same(0, preg_match('#(src|href)="(https?:)?//#', $b), 'no external resources');
     $t->same(false, $r->hasHeader('X-Powered-By'));
@@ -65,10 +65,10 @@ $t->test('sold-out label, low stock, and in-stock products first', function () u
     $file = $mockFile([['Gone Saree', '999.00', 0], ['Last Saree', '987654.50', 2]]);
     $b = Helpers::app(Helpers::config(['ERP_MOCK_FILE' => $file]))->handle(Helpers::request('GET', '/'))->body();
     $t->contains('<span class="JEjkwq_soldOutBadge">Out of stock</span>', $b);
-    $t->contains('aria-label="Gone Saree is out of stock"', $b);
+    $t->ok(!str_contains($b, 'aria-label="Gone Saree is out of stock"'), 'no out-of-stock button'); // UI9: the badge is the only out-of-stock indicator
     $t->contains(' disabled=""', $b);
     $t->contains('Only 2 left', $b);
-    $t->contains('Rs. 9,87,654.50', $b, 'Indian digit grouping');
+    $t->contains('₹9,87,654.50', $b, 'Indian digit grouping');
     $t->ok(strpos($b, 'Last Saree') < strpos($b, 'Gone Saree'), 'in-stock card comes first');
     $t->same(1, substr_count($b, 'JEjkwq_soldOutBadge">'));
 });

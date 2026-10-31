@@ -189,7 +189,7 @@ final class App
         $sms = null;
         if ($config->otpPepper() !== null) {
             $sms = $config->smsMode === 'http'
-                ? new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId, (string) $config->smsOtpTemplateId, $config->smsOtpTemplateText, 10, null, $config->smsHintTemplateId, $config->smsHintTemplateText)
+                ? new HttpSmsGateway((string) $config->smsApiUrl, (string) $config->smsUsername, (string) $config->smsApiKey(), (string) $config->smsSenderId, 10, null, $config->smsHintTemplateId, $config->smsHintTemplateText) // SMS2: the OTP text + DLT ID come from Sms\SmsTemplates
                 : new LogSmsGateway($config->smsLogPath, $clock);
         }
 
@@ -203,6 +203,9 @@ final class App
     public function handle(Request $request): Response
     {
         $started = microtime(true);
+        // NAV1: the header's bag / wishlist counts arrive finished ("<bag>.<wish>", digits only, written by site.js; anything else = 0)
+        $counts = preg_match('/^(\d{1,3})\.(\d{1,3})$/', (string) $request->cookie('pf_counts'), $cm) === 1 ? ['bag' => (int) $cm[1], 'wish' => (int) $cm[2]] : ['bag' => 0, 'wish' => 0];
+        \Pratyangi\Views\View::$counts = $counts;
         $requestId = self::requestId($request);
         $this->logger->setRequestId($requestId);
         $context = new Context($request, $requestId, $this->config->trustProxy, function (Request $r): ?array {

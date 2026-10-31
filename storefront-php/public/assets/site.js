@@ -9,6 +9,7 @@
  */
 (function () {
   'use strict';
+  if (window.__pfSite) return; window.__pfSite = true; // REQ1: loaded twice = set up once
 
   var doc = document;
   var win = window;
@@ -21,6 +22,13 @@
 
   function qs(sel, root) { return (root || doc).querySelector(sel); }
   function qsa(sel, root) { return Array.prototype.slice.call((root || doc).querySelectorAll(sel)); }
+  // The one price format (UI9c), same as PHP View::rs: 1799 -> "₹1,799", 1888.95 -> "₹1,888.95", 100000 -> "₹1,00,000"
+  function money(rupees) {
+    var paise = Math.round(Number(rupees) * 100), abs = Math.abs(paise), whole = String(Math.floor(abs / 100)), fr = abs % 100;
+    if (whole.length > 3) whole = whole.slice(0, -3).replace(/\B(?=(\d{2})+$)/g, ",") + "," + whole.slice(-3);
+    return (paise < 0 ? "-" : "") + "₹" + whole + (fr ? "." + (fr < 10 ? "0" : "") + fr : "");
+  }
+  win.PratyangiMoney = money;
   function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
 
   /** cubic-bezier(x1, y1, x2, y2) as a function of progress (what framer-motion's cubicBezier returns). */
@@ -413,11 +421,13 @@
     b.style.left = '0';
     b.style.right = '0';
     b.style.width = '100%';
+    doc.documentElement.classList.add('pf_locked'); // UI9: the bottom bars and the WhatsApp button step aside while a menu, sheet or overlay is open
   }
   function unlockScroll() {
     if (lockDepth === 0 || --lockDepth > 0) return;
     var b = doc.body;
     b.style.overflow = b.style.position = b.style.top = b.style.left = b.style.right = b.style.width = '';
+    doc.documentElement.classList.remove('pf_locked');
     win.scrollTo(0, lockY);
   }
   win.PratyangiScroll = { lock: lockScroll, unlock: unlockScroll };
@@ -576,12 +586,17 @@
       box.hidden = !entries.length;
       return entries.length;
     }
+    // same rule as the server: every typed word (2+ characters) must start a word of the text
+    function wordsOf(s) { return s.toLowerCase().split(/[^a-z0-9\u00c0-\uffff]+/).filter(Boolean); }
+    function allMatch(term, text) {
+      var typed = wordsOf(term).filter(function (w) { return w.length >= 2; }), have = wordsOf(text);
+      return typed.length > 0 && typed.every(function (w) { return have.some(function (h) { return h.indexOf(w) === 0; }); });
+    }
     function localMatches(term) {
-      var t = term.toLowerCase();
-      var sugg = qsa('a[data-pf-text]', popularBox).filter(function (a) { return (a.getAttribute('data-pf-text') || '').split('|').some(function (w) { return w.indexOf(t) !== -1; }); })
+      var sugg = qsa('a[data-pf-text]', popularBox).filter(function (a) { return (a.getAttribute('data-pf-text') || '').split('|').some(function (w) { return allMatch(term, w); }); })
         .map(function (a) { return { label: a.firstChild ? a.firstChild.textContent.trim() : '', href: a.getAttribute('href') }; });
       var group = qsa('.pSCCwa_menuGroup').filter(function (g) { var h = qs('h2', g); return h && h.textContent.trim() === 'COLLECTIONS'; })[0];
-      var colls = group ? qsa('a', group).filter(function (a) { return a.textContent.toLowerCase().indexOf(t) !== -1; }).map(function (a) { return { label: a.textContent.trim(), href: a.getAttribute('href') }; }) : [];
+      var colls = group ? qsa('a', group).filter(function (a) { return allMatch(term, a.textContent); }).map(function (a) { return { label: a.textContent.trim(), href: a.getAttribute('href') }; }) : [];
       return { sugg: sugg, colls: colls };
     }
     function showProducts(products, term) {
@@ -596,8 +611,8 @@
         img.src = imgBase && p.imagePath ? imgBase + String(p.imagePath).replace(/^\/+/, '') : '/assets/images/reference/product-1.webp';
         var name = el('span', 'pf_shName');
         name.appendChild(bold(p.name, term));
-        var price = el('strong', '', '\u20B9' + Number(p.price).toLocaleString('en-IN'));
-        if (p.mrp > p.price) { var mrp = el('del', '', '\u20B9' + Number(p.mrp).toLocaleString('en-IN')); price.appendChild(mrp); }
+        var price = el('strong', '', money(p.price));
+        if (p.mrp > p.price) { var mrp = el('del', '', money(p.mrp)); price.appendChild(mrp); }
         a.appendChild(img); a.appendChild(name); a.appendChild(price);
         a.addEventListener('click', function () { remember(term); closeSearch(); });
         productsBox.appendChild(a);
@@ -614,7 +629,7 @@
           var products = Array.isArray(data.products) ? data.products : [];
           showProducts(products, term);
           var local = localMatches(term);
-          if (empty) { empty.textContent = 'No results for \u201C' + term + '\u201D'; empty.hidden = products.length > 0 || local.sugg.length > 0 || local.colls.length > 0; }
+          if (empty) { empty.textContent = "No products found for '" + term + "'"; empty.hidden = products.length > 0 || local.sugg.length > 0 || local.colls.length > 0; }
         })
         .catch(function (error) {
           if (error && error.name === 'AbortError') return; // a newer search replaced this one
@@ -663,12 +678,15 @@
     function closeSearch() {
       if (!searchIsOpen) return;
       searchIsOpen = false;
-      scrim.hidden = true;
       unlockScroll();
+      if (canAnimate && !reduce) {
+        dialog.animate([{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateY(-12px)' }], { duration: 200, easing: 'ease-in' });
+        win.setTimeout(function () { if (!searchIsOpen) scrim.hidden = true; }, 200);
+      } else scrim.hidden = true;
       stopPlaceholder();
       win.clearTimeout(typing);
       if (inflight) { inflight.abort(); inflight = null; }
-      if (searchOpen) searchOpen.focus();
+      if (searchOpen) searchOpen.focus({ preventScroll: true });
     }
     function submit() {
       var term = input ? input.value.trim() : '';
@@ -951,11 +969,35 @@
     }
   }
 
+  // every count badge (header and tab bar): hidden at 0, "9+" above 9
+  function badge(span, n) { span.hidden = n < 1; span.textContent = n > 9 ? '9+' : String(n); }
+
+  // NAV1: the server paints the badges from this cookie, so the next page's header arrives finished ("<bag>.<wish>", a year, first-party, no secret).
+  // Never written while the page is being prerendered: a prerendered page must not change state before it is shown.
+  function syncCounts() {
+    if (doc.prerendering) { doc.addEventListener('prerenderingchange', syncCounts, { once: true }); return; }
+    var value = Math.min(bagCountNow(), 999) + '.' + Math.min(wishRead().length, 999);
+    if (doc.cookie.indexOf('pf_counts=' + value) === -1) doc.cookie = 'pf_counts=' + value + '; path=/; max-age=31536000; samesite=lax' + (win.location.protocol === 'https:' ? '; secure' : '');
+  }
+
+  doc.addEventListener('focusin', function (e) { if (e.target.matches && e.target.matches('input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]),textarea,select')) doc.body.classList.add('pf_kb'); });
+  doc.addEventListener('focusout', function () { doc.body.classList.remove('pf_kb'); });
+
+  // the empty pages fill the screen below the top bar and header (site.css --pf-head)
+  function headHeight() {
+    var bar = qs('.pf_topbar'), head = qs('[data-pf="header"]');
+    if (bar && head) doc.documentElement.style.setProperty('--pf-head', (bar.offsetHeight + head.offsetHeight) + 'px');
+  }
+  headHeight();
+  win.addEventListener('resize', headHeight);
+  win.addEventListener('load', headHeight);
+
   function bagCount() {
     function show() {
       var n = bagCountNow();
-      qsa('[data-pf="bag-count"]').forEach(function (span) { span.textContent = String(n); });
+      qsa('[data-pf="bag-count"]').forEach(function (span) { badge(span, n); });
       qsa('[data-pf="bag-link"]').forEach(function (link) { link.setAttribute('aria-label', 'Open your bag, ' + n + ' items'); });
+      syncCounts();
     }
     show();
     win.addEventListener('storage', function (event) { if (event.key === null || event.key === BAG_KEY) show(); });
@@ -1016,8 +1058,9 @@
   function wishlist() {
     function paint() {
       var list = wishRead();
-      qsa('[data-pf="wish-count"]').forEach(function (span) { span.textContent = String(list.length); });
+      qsa('[data-pf="wish-count"]').forEach(function (span) { badge(span, list.length); });
       qsa('[data-pf="wish-link"]').forEach(function (link) { link.setAttribute('aria-label', 'Open your wishlist, ' + list.length + ' items'); });
+      syncCounts();
       qsa('[data-pf="wish"]').forEach(function (button) {
         var on = list.indexOf(button.getAttribute('data-sku')) !== -1;
         button.setAttribute('aria-pressed', on ? 'true' : 'false');
@@ -1046,6 +1089,21 @@
       var drop = function () { if (img.parentNode) img.parentNode.removeChild(img); };
       img.addEventListener('error', drop);
       if (img.complete && img.naturalWidth === 0 && img.getAttribute('src')) drop();
+    });
+  }
+
+  // UI9 phone tab bar: the pill slides to the tapped tab at once (CSS transition).
+  // No prefetch: every page is sent "no-store", so a prefetched copy can never be used and the tap fetched the page twice (REQ1).
+  function trayTabs() {
+    var tray = qs('[data-pf="tray"]');
+    if (!tray) return;
+    qsa('.pf_trayTab', tray).forEach(function (tab, i) {
+      tab.addEventListener('click', function () {
+        var pill = qs('.pf_trayPill', tray);
+        if (pill) pill.hidden = false;
+        tray.style.setProperty('--pf-tab', String(i));
+        qsa('.pf_trayTab', tray).forEach(function (t) { t.classList.toggle('pf_trayOn', t === tab); });
+      });
     });
   }
 
@@ -1110,9 +1168,16 @@
       wish.type = 'button';
       wish.setAttribute('data-pf', 'wish');
       wish.setAttribute('data-sku', d('sku'));
+      if (d('sizes')) add.setAttribute('data-sizes', d('sizes'));
       var link = el('a', 'pf_qv_link', 'View full details');
       link.href = d('href');
-      [add, wish, link].forEach(function (n) { info.appendChild(n); });
+      var share = el('button', 'pf_share', 'Share');
+      share.type = 'button';
+      share.setAttribute('data-pf', 'share');
+      share.setAttribute('data-share-title', d('name'));
+      share.setAttribute('data-share-price', d('price'));
+      share.setAttribute('data-share-url', d('href'));
+      [add, wish, share, link].forEach(function (n) { info.appendChild(n); });
       box.appendChild(x); box.appendChild(img); box.appendChild(info);
       scrim.appendChild(box);
       doc.body.appendChild(scrim);
@@ -1141,6 +1206,143 @@
     }, true);
   }
 
+  /* ------------------------------------------------------------------ 11b. UI10: size picker, size guide, share */
+
+  // A small sheet (phones: bottom sheet with a handle, page scroll locked) or, from 768px, a popover under the opener. Returns {box, close}.
+  function sheet(opener, label, onClose) {
+    var phone = !win.matchMedia('(min-width: 768px)').matches;
+    var scrim = doc.createElement('div');
+    scrim.className = phone ? 'pf_sheetBack' : 'pf_popBack';
+    var box = doc.createElement('section');
+    box.className = phone ? 'pf_sheet' : 'pf_pop';
+    box.setAttribute('role', 'dialog');
+    box.setAttribute('aria-modal', 'true');
+    box.setAttribute('aria-label', label);
+    if (phone) { var handle = doc.createElement('span'); handle.className = 'pf_sheetHandle'; handle.setAttribute('aria-hidden', 'true'); box.appendChild(handle); }
+    scrim.appendChild(box);
+    doc.body.appendChild(scrim);
+    if (!phone && opener) {
+      var r = opener.getBoundingClientRect();
+      box.style.top = Math.round(r.bottom + 8) + 'px';
+      box.style.left = Math.round(Math.max(12, Math.min(r.left, doc.documentElement.clientWidth - 332))) + 'px';
+    }
+    lockScroll();
+    var done = false;
+    function close() {
+      if (done) return;
+      done = true;
+      scrim.remove();
+      unlockScroll();
+      win.removeEventListener('keydown', onKey, true);
+      if (onClose) onClose();
+      if (opener && opener.isConnected) opener.focus();
+    }
+    function onKey(event) { if (event.key === 'Escape') { event.stopPropagation(); close(); } }
+    win.addEventListener('keydown', onKey, true); // window capture runs before Quick View's document listener: Escape closes only this sheet
+    scrim.addEventListener('mousedown', function (event) { if (event.target === scrim) close(); });
+    return { box: box, close: close };
+  }
+
+  function sizeGuide(opener) {
+    var s = sheet(opener, 'Size guide');
+    var h = doc.createElement('h2'); h.textContent = 'Size guide'; s.box.appendChild(h);
+    var note = doc.createElement('p'); note.className = 'pf_sheetNote'; note.textContent = 'DRAFT measurements (inches), to be confirmed by the shop.'; s.box.appendChild(note);
+    var t = doc.createElement('table'); t.className = 'pf_sizeTable';
+    t.innerHTML = '<thead><tr><th>Size</th><th>Bust</th><th>Waist</th><th>Length</th></tr></thead><tbody>'
+      + [['S', 34, 28, 44], ['M', 36, 30, 44], ['L', 38, 32, 45], ['XL', 40, 34, 45], ['XXL', 42, 36, 46]].map(function (r) { return '<tr><td>' + r.join('</td><td>') + '</td></tr>'; }).join('') + '</tbody>';
+    s.box.appendChild(t);
+    var ok = doc.createElement('button'); ok.type = 'button'; ok.className = 'pf_sheetBtn'; ok.textContent = 'Close'; ok.addEventListener('click', s.close); s.box.appendChild(ok);
+    ok.focus();
+  }
+
+  // "S:1,M:1,L:0" -> chips; Add to bag stays disabled until a size is chosen; the bag line id is the variant SKU "<sku>~<size>" (DEMO, see docs/figma/DEMO_MAP.md).
+  function sizePicker(opener, sku, sizes) {
+    var s = sheet(opener, 'Choose a size');
+    var h = doc.createElement('h2'); h.textContent = 'Select size'; s.box.appendChild(h);
+    var chips = doc.createElement('div'); chips.className = 'pf_sizeChips'; chips.setAttribute('role', 'group'); chips.setAttribute('aria-label', 'Sizes');
+    var add = doc.createElement('button'); add.type = 'button'; add.className = 'pf_sheetBtn'; add.textContent = 'Add to bag'; add.disabled = true;
+    var chosen = '';
+    sizes.split(',').forEach(function (pair) {
+      var bits = pair.split(':');
+      var chip = doc.createElement('button');
+      chip.type = 'button';
+      chip.className = 'pf_sizeChip';
+      chip.textContent = bits[0];
+      chip.setAttribute('aria-pressed', 'false');
+      if (bits[1] !== '1') { chip.disabled = true; chip.setAttribute('aria-label', bits[0] + ', out of stock'); }
+      chip.addEventListener('click', function () {
+        chosen = bits[0];
+        qsa('.pf_sizeChip', chips).forEach(function (c) { c.setAttribute('aria-pressed', c === chip ? 'true' : 'false'); });
+        add.disabled = false;
+      });
+      chips.appendChild(chip);
+    });
+    s.box.appendChild(chips);
+    var guide = doc.createElement('button'); guide.type = 'button'; guide.className = 'pf_sizeGuide'; guide.textContent = 'Size guide';
+    guide.addEventListener('click', function () { sizeGuide(guide); });
+    s.box.appendChild(guide);
+    s.box.appendChild(add);
+    add.addEventListener('click', function () {
+      if (!chosen || !win.PratyangiBag) return;
+      var id = sku + '~' + chosen;
+      var result = win.PratyangiBag.add(id);
+      doc.dispatchEvent(new win.CustomEvent('pf:bag-added', { detail: { sku: id, ok: result.ok, message: result.message, opener: opener } }));
+      s.close();
+      toast(result.ok ? 'Added to bag · Size ' + chosen : result.message);
+    });
+    var first = qs('.pf_sizeChip:not([disabled])', chips);
+    if (first) first.focus();
+  }
+
+  function toast(text) {
+    var t = doc.createElement('div');
+    t.className = 'pf_toast';
+    t.setAttribute('role', 'status');
+    t.textContent = text;
+    doc.body.appendChild(t);
+    win.setTimeout(function () { t.remove(); }, 2200);
+  }
+
+  function shareSheet(opener, title, text, url) {
+    var s = sheet(opener, 'Share');
+    var h = doc.createElement('h2'); h.textContent = 'Share'; s.box.appendChild(h);
+    var msg = title + ' – ' + text + ' ' + url;
+    [['WhatsApp', 'https://wa.me/?text=' + encodeURIComponent(msg)], ['Facebook', 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url)]].forEach(function (pair) {
+      var a = doc.createElement('a'); a.className = 'pf_shareItem'; a.textContent = pair[0]; a.href = pair[1]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+      s.box.appendChild(a);
+    });
+    var copy = doc.createElement('button'); copy.type = 'button'; copy.className = 'pf_shareItem'; copy.textContent = 'Copy link';
+    copy.addEventListener('click', function () {
+      var ok = function () { s.close(); toast('Link copied'); };
+      if (win.navigator.clipboard && win.navigator.clipboard.writeText) win.navigator.clipboard.writeText(url).then(ok, ok); else ok();
+    });
+    s.box.appendChild(copy);
+    qs('.pf_shareItem', s.box).focus();
+  }
+
+  function productExtras() {
+    // capture phase: a sized product's "Add to bag" opens the picker instead of adding the plain SKU (bag.js / product.js listen later)
+    doc.addEventListener('click', function (event) {
+      var button = event.target.closest ? event.target.closest('[data-pf="add-to-bag"], [data-pf="add-product"]') : null;
+      if (!button || button.disabled) return;
+      var card = button.closest('[data-qv-sizes]');
+      var sizes = button.getAttribute('data-sizes') || (card ? card.getAttribute('data-qv-sizes') : '') || '';
+      if (!sizes) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      sizePicker(button, button.getAttribute('data-sku') || '', sizes);
+    }, true);
+    doc.addEventListener('click', function (event) {
+      var button = event.target.closest ? event.target.closest('[data-pf="share"]') : null;
+      if (!button) return;
+      var url = new win.URL(button.getAttribute('data-share-url') || win.location.href, win.location.href).href;
+      var title = button.getAttribute('data-share-title') || doc.title;
+      var text = (button.getAttribute('data-share-price') || '') + ' · Pratyangi Fashions';
+      if (win.navigator.share) win.navigator.share({ title: title, text: text, url: url }).catch(function () {});
+      else shareSheet(button, title, text, url);
+    });
+  }
+
   /* ------------------------------------------------------------------ 12. "Try again" of the catalogue message */
 
   // The web's CatalogState retry asks for the catalogue again; the PHP page is built on the server, so it loads the page again.
@@ -1161,6 +1363,14 @@
     if (tab && tab.scrollIntoView) tab.scrollIntoView({ inline: 'center', block: 'nearest' });
     pictureFallback();
     avatarFallback();
+    trayTabs();
+    productExtras();
+    // help FAQs: one open at a time (details name="pf-faq" does it natively; this covers browsers without it)
+    qsa('details[name="pf-faq"]').forEach(function (d) {
+      d.addEventListener('toggle', function () {
+        if (d.open) qsa('details[name="pf-faq"]').forEach(function (o) { if (o !== d) o.open = false; });
+      });
+    });
     retry();
     initHeader();
     qsa('[data-pf="wish-stat"]').forEach(function (n) { n.textContent = String(wishRead().length); });

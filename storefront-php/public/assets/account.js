@@ -8,6 +8,7 @@
  */
 (function (win) {
   'use strict';
+  if (window.__pfAccount) return; window.__pfAccount = true; // REQ1: loaded twice = set up once
   var doc = win.document;
   var GENERIC = 'Something went wrong. Please try again.';
   var UNREACHABLE = 'We could not reach the server. Check your connection and try again.';

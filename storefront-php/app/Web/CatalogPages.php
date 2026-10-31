@@ -5,6 +5,8 @@ namespace Pratyangi\Web;
 
 use Pratyangi\Catalog\CatalogService;
 use Pratyangi\Catalog\Collation;
+use Pratyangi\Catalog\ProductImage;
+use Pratyangi\Catalog\Variants;
 use Pratyangi\Http\Request;
 use Pratyangi\Http\Response;
 use Pratyangi\Support\Logger;
@@ -140,7 +142,14 @@ final class CatalogPages
     /** GET /wishlist: the frame; wishlist.js draws the saved items (the list is in the browser, so nothing here is per visitor). */
     public function wishlist(Request $request): Response
     {
-        $body = View::render('catalog/wishlist', ['account' => $this->account($request->cookie(self::COOKIE))]);
+        // UI10: the sized products' sizes (Variants, the one source) so "Move to bag" can open the size picker; the catalogue JSON stays as the contract says
+        $sizes = [];
+        foreach ($this->products() ?? [] as $p) {
+            if (($attr = Variants::attr($p)) !== '') {
+                $sizes[(string) $p['sku']] = $attr;
+            }
+        }
+        $body = View::render('catalog/wishlist', ['account' => $this->account($request->cookie(self::COOKIE)), 'sizes' => $sizes]);
         return $this->page($request, 'Wishlist | Pratyangi Fashions', self::LISTING_DESCRIPTION, $body, ['1_e1s2q5g68a2.css', '3wh3hbs4o_ca8.css', '0xslsry9_slir.css'], ['site.js', 'bag.js', 'wishlist.js'])->setHeader('X-Robots-Tag', 'noindex');
     }
 
@@ -168,7 +177,32 @@ final class CatalogPages
 
         $inner = View::render('catalog/product', ['p' => $found, 'options' => self::otherOptions($products ?? [], $found)]);
         $body = View::render('catalog/product_frame', ['account' => $account, 'inner' => $inner]);
-        return $this->page($request, self::PRODUCT_TITLE, self::PRODUCT_DESCRIPTION, $body, self::STYLES, ['site.js', 'bag.js', 'product.js']);
+        return $this->page($request, self::PRODUCT_TITLE, self::PRODUCT_DESCRIPTION, $body, self::STYLES, ['site.js', 'bag.js', 'product.js'], 200, false, self::shareMeta($request, $found));
+    }
+
+    /**
+     * UI10: Open Graph + Twitter tags so WhatsApp/Facebook show a rich preview (absolute URLs).
+     * shortcut: the origin comes from the Host header (escaped); switch to a configured public origin when one exists.
+     * @param array<string,mixed> $p
+     */
+    public static function shareMeta(Request $request, array $p): string
+    {
+        $host = (string) ($request->header('Host') ?? '');
+        $origin = (preg_match('/^(localhost|127\.0\.0\.1)(:\d+)?$/', $host) === 1 ? 'http://' : 'https://') . $host;
+        $abs = static fn (string $path): string => str_starts_with($path, 'http') ? $path : $origin . $path;
+        $title = (string) $p['name'] . ' | Pratyangi Fashions';
+        $desc = View::rs($p['price']) . ' · ' . trim(self::subtitle($p) . ' · Pratyangi Fashions', ' ·');
+        $tags = ['og:type' => 'product', 'og:site_name' => 'Pratyangi Fashions', 'og:title' => $title, 'og:description' => $desc,
+            'og:url' => $abs(CatalogLinks::productHref((string) $p['sku'])), 'og:image' => $abs(ProductImage::url($p['imagePath'] ?? null)),
+            'product:price:amount' => number_format((float) $p['price'], 2, '.', ''), 'product:price:currency' => 'INR'];
+        $out = '';
+        foreach ($tags as $k => $v) {
+            $out .= '<meta property="' . $k . '" content="' . View::e($v) . '"/>';
+        }
+        foreach (['twitter:card' => 'summary_large_image', 'twitter:title' => $title, 'twitter:description' => $desc, 'twitter:image' => $tags['og:image']] as $k => $v) {
+            $out .= '<meta name="' . $k . '" content="' . View::e($v) . '"/>';
+        }
+        return $out;
     }
 
     private const LISTING_DESCRIPTION = 'Discover the latest additions to the Pratyangi Fashions collection of handwoven silk sarees.';
@@ -214,9 +248,10 @@ final class CatalogPages
      * @param list<string> $styles
      * @param list<string> $scripts
      */
-    private function page(Request $request, string $title, string $description, string $body, array $styles, array $scripts, int $status = 200, bool $noStore = false): Response
+    private function page(Request $request, string $title, string $description, string $body, array $styles, array $scripts, int $status = 200, bool $noStore = false, string $meta = ''): Response
     {
         $response = Response::html(View::render('layout', [
+            'meta' => $meta,
             'title' => $title,
             'description' => $description,
             'content' => $body,
@@ -227,7 +262,7 @@ final class CatalogPages
         if ($noStore) {
             $response->setHeader('Cache-Control', 'no-store'); // a temporary failure must not be kept by a cache
         } elseif ($token !== null && $token !== '') {
-            $response->setHeader('Cache-Control', 'private, no-store'); // the header differs per visitor
+            $response->setHeader('Cache-Control', 'private, no-cache'); // the header differs per visitor; no-cache (not no-store) keeps Back instant (NAV1: no secrets on catalogue pages)
         }
         if ($token !== null && $token !== '') {
             $response->appendHeader('Vary', 'Cookie');

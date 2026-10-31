@@ -10,6 +10,7 @@
  */
 (function () {
   'use strict';
+  if (window.__pfAuthOtp) return; window.__pfAuthOtp = true; // REQ1: loaded twice = set up once
 
   var A = window.pfAuth;
   if (!A) return;

@@ -130,12 +130,10 @@ final class EventTemplates
         ], null, 'Update on your return for ' . ShopInfo::brandName() . ' order ' . $o['orderNo']);
     }
 
-    /** 199900 -> "₹1,999.00" (Indian digit grouping); money is whole paise everywhere. */
+    /** 199900 -> "₹1,999": the shared price format (View::paise). */
     public static function inr(int $paise): string
     {
-        $rupees = (string) intdiv(abs($paise), 100);
-        $grouped = strlen($rupees) > 3 ? preg_replace('/\B(?=(\d{2})+(?!\d))/', ',', substr($rupees, 0, -3)) . ',' . substr($rupees, -3) : $rupees;
-        return ($paise < 0 ? '-' : '') . '₹' . $grouped . '.' . sprintf('%02d', abs($paise) % 100);
+        return \Pratyangi\Views\View::paise($paise);
     }
 
     private static function notYou(): string

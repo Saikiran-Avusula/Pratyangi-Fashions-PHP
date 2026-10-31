@@ -22,8 +22,7 @@ $pdo = DbGuard::connect();
 DbGuard::clean($pdo);
 $out = dirname(__DIR__) . '/.claude/snapshots/g1';
 @mkdir($out, 0777, true);
-$tmp = sys_get_temp_dir() . '/pf_g1_' . bin2hex(random_bytes(4));
-mkdir($tmp);
+$tmp = Tmp::dir('pf_g1_');
 $router = BrowserRig::router($tmp);
 file_put_contents($router, str_replace('echo $r->body();', 'echo str_replace("https://lh3.googleusercontent.com/a/demo", "/assets/images/figma/lotus-emblem.svg", $r->body());', (string) file_get_contents($router)));
 
@@ -42,8 +41,9 @@ foreach ($cookies as $kind => $cookie) {
     foreach ([['/', 'header'], ['/account', 'account']] as [$path, $label]) {
         foreach ([390 => 844, 1440 => 900] as $w => $h) {
             $file = $out . '/' . $kind . '-' . $label . '-' . $w . '.png';
-            $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=5000', '--window-size=' . $w . ',' . $h, '--user-data-dir=' . $tmp . '/profile',
+            $p = proc_open([$chrome, '--headless=new', '--disable-gpu', '--hide-scrollbars', '--virtual-time-budget=5000', '--window-size=' . $w . ',' . $h, '--user-data-dir=' . Tmp::profile(),
                 '--screenshot=' . $file, 'http://127.0.0.1:' . $port . $path], [['null'], ['null'], ['null']], $pipes);
+            Tmp::track($p);
             proc_close($p);
             echo (is_file($file) ? 'wrote ' : 'MISSING ') . basename($file) . "\n";
         }

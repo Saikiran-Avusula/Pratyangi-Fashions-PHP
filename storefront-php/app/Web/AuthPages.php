@@ -134,7 +134,7 @@ final class AuthPages
     private static function perVisitor(Response $response, ?string $token): Response
     {
         if ($token !== null && $token !== '') {
-            $response->setHeader('Cache-Control', 'private, no-store')->appendHeader('Vary', 'Cookie');
+            $response->setHeader('Cache-Control', 'private, no-cache')->appendHeader('Vary', 'Cookie'); // NAV1: only the header differs; Back stays instant
         }
         return $response;
     }
